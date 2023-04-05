@@ -1,21 +1,51 @@
+require('dotenv').config();
+require('express-async-errors');;
+
 const express = require('express')
 app = express()
 const http = require('http')
-const {Server} = require('socket.io')
-const cors =  require('cors')
-const { create } = require('domain')
-const { log } = require('console')
+const cors = require('cors')
+const favicon = require('express-favicon');
+const logger = require('morgan')
+const { Server } = require('socket.io')
 
 app.use(cors())
 const server = http.createServer(app)
 
 const io = new Server(server, {
-    cors: {
-        origin: "http://localhost:3000",
-        methods: ["GET","POST"]
-    }
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
 })
 
+app.use(express.json());
+app.use(cors());
+app.use(express.urlencoded({ extended: false }));
+app.use(logger('dev'));
+app.use(express.static('public'))
+app.use(favicon(__dirname + '/public/favicon.ico'));
+
+
+// routers
+const authRouter = require('./routes/auth');
+const mainRouter = require('./routes/mainRouter.js');
+
+// routes
+app.use('/api/v1/auth', authRouter)
+app.use('/api/v1', mainRouter);
+
+
+// error handler
+const notFoundMiddleware = require('./middleware/not-found');
+const errorHandlerMiddleware = require('./middleware/error-handler');
+
+app.use(notFoundMiddleware);
+app.use(errorHandlerMiddleware);
+
+
+
+/** merging original index.js below */
 let rooms = []
 io.on("connection", (socket)=>{
 // lessThanTeen = rooms.filter(room => room.players.length<10)
@@ -114,3 +144,5 @@ io.on("connection", (socket)=>{
 server.listen(3001, ()=>{
     console.log("SERVER RUNNING");
 })
+
+module.exports = app;
