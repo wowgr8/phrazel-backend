@@ -4,19 +4,32 @@ app = express()
 require('express-async-errors');
 const session = require('express-session');
 const MongoDBStore = require("connect-mongodb-session")(session);
-const http = require('http')
+const connectDB = require('./db/connect');
 
+const http = require('http')
 const favicon = require('express-favicon');
 const logger = require('morgan')
 const { Server } = require('socket.io')
 
 const server = http.createServer(app)
 const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
+    cors: {
+        origin: "http://localhost:3000",
+        methods: ["GET", "POST"]
+    }
 })
+
+/* database connection */
+const url = process.env.MONGO_URI;
+const store = new MongoDBStore({
+    // may throw an error, which won't be caught
+    uri: url,
+    collection: "mySessions",
+});
+store.on("error", function (error) {
+    console.log(error);
+});
+
 
 /** extra security packages */
 //TODO: create a middleware file for helmet, xss, rateLimiter
@@ -53,7 +66,7 @@ let rooms = []
 io.on("connection", (socket) => {
     // maxRooms = rooms.filter(room => room.players.length<10)
     console.log('a user connected');
-    
+
     if (rooms.length > 0) {
         maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
         availableRooms = maxRooms.map(room => room.room)
@@ -132,7 +145,7 @@ io.on("connection", (socket) => {
             console.log("LLego!!!");
             if (rooms[i].players.length > 2 &&
                 rooms[i].players.every(player => player.word != '')) {
-    
+
                 console.log("All ready");
                 io.to(String(rooms[i].room)).emit('all_players_ready')
             }
@@ -166,8 +179,18 @@ io.on("connection", (socket) => {
     })
 })
 
-server.listen(3001, ()=>{
-    console.log("backend server running on port 3001...");
-})
+const port = 3001;
+const start = async () => {
+    try {
+        await connectDB(process.env.MONGO_URI)
+        app.listen(port, () =>
+            console.log(`Server is listening on port ${port}...`)
+        );
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+start();
 
 module.exports = app;
