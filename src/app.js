@@ -2,10 +2,8 @@ require('dotenv').config();
 const express = require('express')
 app = express()
 require('express-async-errors');
-const session = require('express-session');
-const MongoDBStore = require("connect-mongodb-session")(session);
-const connectDB = require('./db/connect');
 
+const cors = require('cors')
 const http = require('http')
 const favicon = require('express-favicon');
 const logger = require('morgan')
@@ -19,45 +17,12 @@ const io = new Server(server, {
     }
 })
 
-/* database connection */
-const url = process.env.MONGO_URI;
-const store = new MongoDBStore({
-    // may throw an error, which won't be caught
-    uri: url,
-    collection: "mySessions",
-});
-store.on("error", function (error) {
-    console.log(error);
-});
-
-
-/** extra security packages */
-//TODO: create a middleware file for helmet, xss, rateLimiter
-const helmet = require('helmet');
-const xss = require('xss-clean');
-const rateLimiter = require('express-rate-limit');
-const cors = require('cors')
-
 app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(logger('dev'));
 app.use(express.static('public'))
 app.use(favicon(__dirname + '/public/favicon.ico'));
-
-
-// routers
-const authRouter = require('./routes/auth');
-const mainRouter = require('./routes/mainRouter.js');
-app.use('/api/v1/auth', authRouter)
-app.use('/api/v1', mainRouter);
-
-
-// error handler
-const notFoundMiddleware = require('./middleware/not-found');
-const errorHandlerMiddleware = require('./middleware/error-handler');
-app.use(notFoundMiddleware);
-app.use(errorHandlerMiddleware);
 
 
 let rooms = []
@@ -180,17 +145,14 @@ io.on("connection", (socket) => {
 })
 
 const port = 3001;
-const start = async () => {
+const start = () => {
     try {
-        await connectDB(process.env.MONGO_URI)
         server.listen(port, () =>
-            console.log(`Server is listening on port ${port}...`)
-        );
+            console.log(`app is listening on port ${port}...`));
     } catch (error) {
         console.log(error);
     }
 };
 
 start();
-
 module.exports = app;
