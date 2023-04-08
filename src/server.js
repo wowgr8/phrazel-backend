@@ -17,7 +17,6 @@ const errorHandlerMiddleware = require('./middleware/error-handler');
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
-
 /* database connection */
 const url = process.env.MONGO_URI;
 const store = new MongoDBStore({
