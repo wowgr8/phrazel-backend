@@ -147,7 +147,13 @@ io.on("connection", (socket)=>{
                 room.playersGuessed++
                 if(room.playersGuessed==(room.players.length-1)) {
                     if(room.words.length>0) io.to(String(room.players[0].id)).emit('all_players_guessed')
-                    else io.to(String(room.players[0].id)).emit('game_over')
+                    else {
+                        io.to(String(room.room)).emit('game_over')
+                        //When the game is over we need to empty the element word of every player because maybe the players want to play a new game 
+                        for(const player of room.players){
+                            player.word = ''
+                        }
+                    }
                 }
                 
             }
