@@ -121,6 +121,7 @@ io.on("connection", (socket)=>{
     socket.on('start_game',(data)=>{
         for (let i=0; i<rooms.length; i++){
             if(rooms[i].room==data) {
+                rooms[i].playersGuessed=0
                 let random = Math.floor(Math.random()*rooms[i].words.length)
                 let wordToGuess = rooms[i].words.splice(random,1)[0]
                 rooms[i].wordToGuess = wordToGuess
@@ -140,10 +141,15 @@ io.on("connection", (socket)=>{
         for(const room of rooms){
             if(room.room==data.room && room.wordToGuess===data.word) {
                 io.to(socket.id).emit('right')
+                console.log(room.words.length,'palabras que quedan');
                 //When a player guesses right we increase the playersGuessed count and we check if all the rest guessed
                 //If so we tell the host he can start next round
                 room.playersGuessed++
-                if(room.playersGuessed==(room.players.length-1)) io.to(String(room.players[0].id)).emit('all_players_guessed')
+                if(room.playersGuessed==(room.players.length-1)) {
+                    if(room.words.length>0) io.to(String(room.players[0].id)).emit('all_players_guessed')
+                    else io.to(String(room.players[0].id)).emit('game_over')
+                }
+                
             }
         }
     })
