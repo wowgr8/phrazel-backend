@@ -118,12 +118,11 @@ io.on("connection", (socket)=>{
         }
     })
 
-
     socket.on('start_game',(data)=>{
         for (let i=0; i<rooms.length; i++){
             if(rooms[i].room==data) {
-                rooms[i].playersGuessed=0
-                let wordToGuess = rooms[i].words[Math.floor(Math.random()*rooms[i].words.length)]
+                let random = Math.floor(Math.random()*rooms[i].words.length)
+                let wordToGuess = rooms[i].words.splice(random,1)[0]
                 rooms[i].wordToGuess = wordToGuess
                 for(const player of rooms[i].players ){
                     if(player.word!==wordToGuess){
