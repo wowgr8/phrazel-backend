@@ -35,8 +35,6 @@ io.on("connection", (socket) => {
     if (rooms.length > 0) {
         maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
         availableRooms = maxRooms.map(room => room.room)
-        console.log(rooms, 'rooms');
-        console.log(availableRooms, 'available rooms');
         io.to(socket.id).emit('available_rooms', availableRooms)
     }
 
@@ -56,7 +54,7 @@ io.on("connection", (socket) => {
 
         maxRooms = rooms.filter(room => room.players.length < 10)
         availableRooms = maxRooms.map(room => room.room)
-        console.log(availableRooms, 'availableRooms');
+        console.log(availableRooms, 'available rooms');
         io.emit('available_rooms', availableRooms)
     })
 
