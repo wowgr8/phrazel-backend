@@ -14,7 +14,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [false, 'email is optional'],
     trim: true,
-    unique: true,
+    unique: false,
     sparse: true,
   },
   password: {

@@ -18,7 +18,7 @@ const register = async (req, res) => {
 
   /* Check if email already exists */
   const existingEmail = await User.findOne({ email: emailValue });
-  if (existingEmail && emailValue !== null) {
+  if (existingEmail && existingEmail !== null) {
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json({ message: 'Email already exists' });
@@ -39,6 +39,19 @@ const register = async (req, res) => {
     .status(StatusCodes.CREATED)
     .json({ user: { username: user.username }, token });
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /** log in authentication for exiting users */
 const login = async (req, res) => {
