@@ -1,22 +1,20 @@
 require('dotenv').config();
-require('express-async-errors');;
-
 const express = require('express')
 app = express()
-const http = require('http')
+require('express-async-errors');
+
 const cors = require('cors')
+const http = require('http')
 const favicon = require('express-favicon');
 const logger = require('morgan')
 const { Server } = require('socket.io')
 
-app.use(cors())
 const server = http.createServer(app)
-
 const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
+    cors: {
+        origin: "http://localhost:3000",
+        methods: ["GET", "POST"]
+    }
 })
 
 app.use(express.json());
@@ -27,91 +25,98 @@ app.use(express.static('public'))
 app.use(favicon(__dirname + '/public/favicon.ico'));
 
 
-// routers
-const authRouter = require('./routes/auth');
-const mainRouter = require('./routes/mainRouter.js');
-
-// routes
-app.use('/api/v1/auth', authRouter)
-app.use('/api/v1', mainRouter);
-
-
-// error handler
-const notFoundMiddleware = require('./middleware/not-found');
-const errorHandlerMiddleware = require('./middleware/error-handler');
-
-app.use(notFoundMiddleware);
-app.use(errorHandlerMiddleware);
-
-
-
-/** merging original index.js below */
 let rooms = []
-io.on("connection", (socket)=>{
-// lessThanTeen = rooms.filter(room => room.players.length<10)
 
-    if(rooms.length>0){
-        lessThanTeen = rooms.filter(room => room.players.length<10)
-        availableRooms = lessThanTeen.map(room=> room.room)
-        console.log(rooms,'rooms');
-        console.log(availableRooms,'available rooms');
-        io.to(socket.id).emit('available_rooms',availableRooms)
-    }
+/* initial user connection to sockets */
+io.on("connection", (socket) => {
+    // maxRooms = rooms.filter(room => room.players.length<10)
+    console.log(`User ${socket.id} connected`);
 
-    socket.on('create_room',data=>{
-        socket.join(String(rooms.length+1))
-        io.to(socket.id).emit('room_number',rooms.length+1)
-        //We add a count playersGuessed to check if all players guessed the word and we can go to the next round
-        rooms.push({room:rooms.length+1,words:[],players:[{id:socket.id,userName:data, word:'',host:true,roundsWon:0}],playersGuessed:0})
-        lessThanTeen = rooms.filter(room => room.players.length<10)
-        availableRooms = lessThanTeen.map(room=>room.room)
-        console.log(availableRooms,'availableRooms');
-        io.emit('available_rooms',availableRooms)
+
+    
+    // socket.on("check_available_rooms",()=>{
+        if (rooms.length > 0) {
+            maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
+            availableRooms = maxRooms.map(room => room.room)
+            io.to(socket.id).emit('available_rooms', availableRooms)
+        }
+    // })
+
+
+
+    /* create a room function with a maximum number of 10 */
+    socket.on('create_room', data => {
+        socket.join(String(rooms.length + 1))
+        io.to(socket.id).emit('room_number', rooms.length + 1)
+
+        rooms.push({
+            room: rooms.length + 1,
+            words: [],
+            players: [{
+                id: socket.id,
+                userName: data, 
+                word: '',
+                roundsWon:0
+            }]
+        })
+
+        maxRooms = rooms.filter(room => room.players.length < 10)
+        availableRooms = maxRooms.map(room => room.room)
+        console.log(availableRooms, 'available rooms');
+        io.emit('available_rooms', availableRooms)
     })
 
-    socket.on('join_room',(data)=>{
+    /* allows users to join different rooms - prompts name upon joining */
+    socket.on('join_room', (data) => {
         socket.join(data.room)
-        for (let i=0; i<rooms.length; i++){
-            if(rooms[i].room == data.room) {
-                //The person who creates the room is the host and the only one who can start the game and next round
-                rooms[i].players.push({id:socket.id,userName:data.userName ,word:'',host:false,roundsWon:0})
-                players = rooms[i].players.map(player=>player.userName)
+        console.log(`user joined the room`)
+
+        for (let i = 0; i < rooms.length; i++) {
+            if (rooms[i].room == data.room) {
+                rooms[i].players.push({ id: socket.id, userName: data.userName, word: '',roundsWon:0 })
+                players = rooms[i].players.map(player => player.userName)
                 io.to(String(data.room)).emit('players', players)
                 return
             }
         }
     })
-    
-    socket.on('leave_room',(data)=>{
+
+    /* allows users to leave rooms */
+    //TODO: remove username when leaving room
+    socket.on('leave_room', (data) => {
         socket.leave(data)
-        for (let i=0; i<rooms.length; i++){
-            if(rooms[i].room == data) {
+        for (let i = 0; i < rooms.length; i++) {
+            if (rooms[i].room == data) {
                 const index = rooms[i].players.indexOf(socket.id)
-                rooms[i].players.splice(index,1)
-                //If the host leaves the room we pass the host to other player
-                if (index==0) rooms[i].players[0].host=true
+                rooms[i].players.splice(index, 1)
                 return
             }
         }
     })
 
+    /* disconnects user from socket */
     socket.on('disconnect', () => {
-        console.log(`${socket.id} disconnected`); 
+        console.log('user disconnected');
     })
 
-    socket.on('send_word',(data)=>{
+    /* allows users to send word or phreases
+     * only starts games when all players have sent a word
+     */
+    socket.on('send_word', (data) => {
         // socket.to(data.room).emit('receive_message',data.message)
-        for (let i=0; i<rooms.length; i++){
-            if(rooms[i].room == data.room) {
-                for(player of rooms[i].players){
-                    if(player.id===socket.id) {
+        for (let i = 0; i < rooms.length; i++) {
+            if (rooms[i].room == data.room) {
+                for (player of rooms[i].players) {
+                    if (player.id === socket.id) {
                         player.word = data.word
                         rooms[i].words.push(data.word)
                     }
                 }
             }
             console.log("LLego!!!");
-            if(rooms[i].players.length>2 && rooms[i].players.every(player => player.word!='')){
+            if (rooms[i].players.length > 2 &&
+                rooms[i].players.every(player => player.word != '')) {
+
                 console.log("All ready");
                 io.to(String(rooms[i].room)).emit('all_players_ready')
             } 
@@ -159,8 +164,9 @@ io.on("connection", (socket)=>{
                     //If we used all the words of all players the game is over
                     else {
                         io.to(String(room.room)).emit('game_over')
-
+                        console.log(room.players,'room.players');
                         scoreArr = room.players.map(player=>player.roundsWon)
+                        console.log(scoreArr,'scoreArr');
                         const i= scoreArr.indexOf(Math.max(...scoreArr))
                         console.log(room.players[i],'player with high score');
                         io.to(String(room.room)).except(String(room.players[i].id)).emit('winner',room.players[i].userName)
@@ -176,12 +182,25 @@ io.on("connection", (socket)=>{
             }
         }
     })
-    
 
+    /** determine when the secret word is guessed by a user */
+    socket.on('guess_word', data => {
+        for (const room of rooms) {
+            if (room.room == data.room && room.wordToGuess === data.word)
+                io.to(socket.id).emit('right')
+        }
+    })
 })
 
-server.listen(3001, ()=>{
-    console.log("SERVER RUNNING");
-})
+const port = 3001;
+const start = () => {
+    try {
+        server.listen(port, () =>
+            console.log(`app is listening on port ${port}...`));
+    } catch (error) {
+        console.log(error);
+    }
+};
 
+start();
 module.exports = app;
