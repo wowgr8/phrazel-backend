@@ -1,15 +1,9 @@
-require('dotenv').config();
-const express = require('express')
-app = express()
+const app = require('./server');
 require('express-async-errors');
-
-const cors = require('cors')
 const http = require('http')
-const favicon = require('express-favicon');
-const logger = require('morgan')
 const { Server } = require('socket.io')
-
 const server = http.createServer(app)
+
 const io = new Server(server, {
     cors: {
         origin: "http://localhost:3000",
@@ -17,16 +11,7 @@ const io = new Server(server, {
     }
 })
 
-app.use(express.json());
-app.use(cors());
-app.use(express.urlencoded({ extended: false }));
-app.use(logger('dev'));
-app.use(express.static('public'))
-app.use(favicon(__dirname + '/public/favicon.ico'));
-
-
 let rooms = []
-
 /* initial user connection to sockets */
 io.on("connection", (socket) => {
     // maxRooms = rooms.filter(room => room.players.length<10)
@@ -192,7 +177,7 @@ io.on("connection", (socket) => {
     })
 })
 
-const port = 3001;
+const port = process.env.PORT || 4000;
 const start = () => {
     try {
         server.listen(port, () =>
@@ -201,6 +186,4 @@ const start = () => {
         console.log(error);
     }
 };
-
 start();
-module.exports = app;
