@@ -98,11 +98,10 @@ io.on("connection", (socket) => {
                     }
                 }
             }
-            console.log("LLego!!!");
             if (rooms[i].players.length > 2 &&
                 rooms[i].players.every(player => player.word != '')) {
 
-                console.log("All ready");
+                console.log("All players ready");
                 io.to(String(rooms[i].room)).emit('all_players_ready')
             } 
         }
@@ -132,7 +131,6 @@ io.on("connection", (socket) => {
             if(room.room==data.room && room.wordToGuess===data.word) {
                 
                 io.to(socket.id).emit('right')
-                console.log(room.words.length,'palabras que quedan');
                 //When a player guesses right we increase the playersGuessed count and we check if all the rest guessed
                 //If so we tell the host he can start next round
                 room.playersGuessed++
@@ -140,7 +138,6 @@ io.on("connection", (socket) => {
                     //all the next code is to keep track of the rounds won of every player
                     idsArr = room.players.map(player=>player.id)
                     const index = idsArr.indexOf(socket.id)
-                    console.log(index,'index');
                     room.players[index].roundsWon++
                 }
                 if(room.playersGuessed==(room.players.length-1)) {
@@ -149,9 +146,7 @@ io.on("connection", (socket) => {
                     //If we used all the words of all players the game is over
                     else {
                         io.to(String(room.room)).emit('game_over')
-                        console.log(room.players,'room.players');
                         scoreArr = room.players.map(player=>player.roundsWon)
-                        console.log(scoreArr,'scoreArr');
                         const i= scoreArr.indexOf(Math.max(...scoreArr))
                         console.log(room.players[i],'player with high score');
                         io.to(String(room.room)).except(String(room.players[i].id)).emit('winner',room.players[i].userName)
