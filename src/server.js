@@ -1,9 +1,23 @@
-const app = require("./app");
+/* module setup */
 require('dotenv').config();
+const express = require('express')
 require('express-async-errors');
 const session = require('express-session');
 const MongoDBStore = require("connect-mongodb-session")(session);
 const connectDB = require('./db/connect');
+app = express()
+
+/** extra security packages */
+const cors = require('cors')
+const favicon = require('express-favicon');
+const logger = require('morgan')
+
+app.use(express.json());
+app.use(cors());
+app.use(express.urlencoded({ extended: false }));
+app.use(logger('dev'));
+app.use(express.static('public'))
+app.use(favicon(__dirname + '/public/favicon.ico'));
 
 /* routers */
 const authRouter = require('./routes/auth');
@@ -32,7 +46,7 @@ store.on("error", function (error) {
 const port = process.env.PORT || 8000;
 const start = async () => {
   try {
-    await connectDB(process.env.MONGO_URI);
+    await connectDB(url);
     app.listen(port, () =>
       console.log(`server is listening on port ${port}...`)
     );
@@ -42,3 +56,4 @@ const start = async () => {
 };
 
 start();
+module.exports = app;
