@@ -15,13 +15,19 @@ let rooms = []
 /* initial user connection to sockets */
 io.on("connection", (socket) => {
     // maxRooms = rooms.filter(room => room.players.length<10)
-    console.log('a user connected');
+    console.log(`User ${socket.id} connected`);
 
-    if (rooms.length > 0) {
-        maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
-        availableRooms = maxRooms.map(room => room.room)
-        io.to(socket.id).emit('available_rooms', availableRooms)
-    }
+
+    
+    // socket.on("check_available_rooms",()=>{
+        if (rooms.length > 0) {
+            maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
+            availableRooms = maxRooms.map(room => room.room)
+            io.to(socket.id).emit('available_rooms', availableRooms)
+        }
+    // })
+
+
 
     /* create a room function with a maximum number of 10 */
     socket.on('create_room', data => {
@@ -33,7 +39,9 @@ io.on("connection", (socket) => {
             words: [],
             players: [{
                 id: socket.id,
-                userName: data, word: ''
+                userName: data, 
+                word: '',
+                roundsWon:0
             }]
         })
 
@@ -50,7 +58,7 @@ io.on("connection", (socket) => {
 
         for (let i = 0; i < rooms.length; i++) {
             if (rooms[i].room == data.room) {
-                rooms[i].players.push({ id: socket.id, userName: data.userName, word: '' })
+                rooms[i].players.push({ id: socket.id, userName: data.userName, word: '',roundsWon:0 })
                 players = rooms[i].players.map(player => player.userName)
                 io.to(String(data.room)).emit('players', players)
                 return
@@ -90,30 +98,67 @@ io.on("connection", (socket) => {
                     }
                 }
             }
-            console.log("LLego!!!");
             if (rooms[i].players.length > 2 &&
                 rooms[i].players.every(player => player.word != '')) {
 
-                console.log("All ready");
+                console.log("All players ready");
                 io.to(String(rooms[i].room)).emit('all_players_ready')
+            } 
+        }
+    })
+
+    socket.on('start_game',(data)=>{
+        for (let i=0; i<rooms.length; i++){
+            if(rooms[i].room==data) {
+                rooms[i].playersGuessed=0
+                let random = Math.floor(Math.random()*rooms[i].words.length)
+                let wordToGuess = rooms[i].words.splice(random,1)[0]
+                rooms[i].wordToGuess = wordToGuess
+                for(const player of rooms[i].players ){
+                    if(player.word!==wordToGuess){
+                        io.to(player.id).emit('word_to_guess', wordToGuess.length)
+                    }else{
+                        io.to(player.id).emit('guessing_your_word')
+                    }
+                }
+                
             }
         }
     })
 
-    /* after all users submit a word, only only one is selected at random */
-    socket.on('start_game', (data) => {
-        for (let i = 0; i < rooms.length; i++) {
-            if (rooms[i].room == data) {
-                let wordToGuess = rooms[i].words[Math.floor(Math.random() * rooms[i].words.length)]
-                rooms[i].wordToGuess = wordToGuess
-                for (const player of rooms[i].players) {
-                    if (player.word !== wordToGuess) {
-                        io.to(player.id).emit('word_to_guess', wordToGuess.length)
-                    } else {
-                        io.to(player.id).emit('guessing_your_word')
+    socket.on('guess_word',data=>{
+        for(const room of rooms){
+            if(room.room==data.room && room.wordToGuess===data.word) {
+                
+                io.to(socket.id).emit('right')
+                //When a player guesses right we increase the playersGuessed count and we check if all the rest guessed
+                //If so we tell the host he can start next round
+                room.playersGuessed++
+                if(room.playersGuessed==1){
+                    //all the next code is to keep track of the rounds won of every player
+                    idsArr = room.players.map(player=>player.id)
+                    const index = idsArr.indexOf(socket.id)
+                    room.players[index].roundsWon++
+                }
+                if(room.playersGuessed==(room.players.length-1)) {
+                    //We check if we used all the words of all players, if not we tell the host(players[0]) can start next round
+                    if(room.words.length>0) io.to(String(room.players[0].id)).emit('all_players_guessed')
+                    //If we used all the words of all players the game is over
+                    else {
+                        io.to(String(room.room)).emit('game_over')
+                        scoreArr = room.players.map(player=>player.roundsWon)
+                        const i= scoreArr.indexOf(Math.max(...scoreArr))
+                        console.log(room.players[i],'player with high score');
+                        io.to(String(room.room)).except(String(room.players[i].id)).emit('winner',room.players[i].userName)
+                        io.to(String(room.players[i].id)).emit('you_won')
+                        //When the game is over we need to reset some values of every player because maybe the players want to play a new game 
+                        for(const player of room.players){
+                            player.word = ''
+                            player.roundsWon=0
+                        }
                     }
                 }
-
+                
             }
         }
     })
