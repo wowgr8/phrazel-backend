@@ -20,18 +20,18 @@ io.on("connection", (socket) => {
 
     
     // socket.on("check_available_rooms",()=>{
-        if (rooms.length > 0) {
-            maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
-            availableRooms = maxRooms.map(room => {
-                const players = room.players.map(player=>player.userName)
-                const roomNumber = room.room
-                return(
-                    {roomNumber,players}
-                )
-            })  
-            console.log(availableRooms, 'available rooms as soon we connect');
-            io.to(socket.id).emit('available_rooms', availableRooms)
-        }
+    if (rooms.length > 0) {
+        maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
+        availableRooms = maxRooms.map(room => {
+            const players = room.players.map(player=>player.userName)
+            const roomNumber = room.room
+            return(
+                {roomNumber,players}
+            )
+        })  
+        console.log(availableRooms, 'available rooms as soon we connect');
+        io.to(socket.id).emit('available_rooms', availableRooms)
+    }
     // })
 
 
