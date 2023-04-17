@@ -5,7 +5,7 @@ require('express-async-errors');
 const session = require('express-session');
 const MongoDBStore = require("connect-mongodb-session")(session);
 const connectDB = require('./db/connect');
-app = express()
+const app = express()
 
 /** extra security packages */
 const cors = require('cors')
@@ -36,11 +36,26 @@ const url = process.env.MONGO_URI;
 const store = new MongoDBStore({
   // may throw an error, which won't be caught
   uri: url,
-  collection: "testing",
+  collection: "sessions",
 });
 store.on("error", function (error) {
   console.log(error);
 });
+
+/* session set-up - proxies and cookies*/
+const session_parms = {
+  secret: process.env.SESSION_SECRET,
+  resave: true,
+  saveUninitialized: true,
+  store: store,
+  cookie: { secure: false, sameSite: "strict" },
+};
+if (app.get("env") === "production") {
+  //SECURITY
+  app.set("trust proxy", 1);
+  session_parms.cookie.secure = true;
+}
+app.use(session(session_parms));
 
 /* connect to localhost://8000  */
 const port = process.env.PORT || 8000;
@@ -56,4 +71,3 @@ const start = async () => {
 };
 
 start();
-module.exports = app;
