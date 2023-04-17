@@ -74,9 +74,18 @@ io.on("connection", (socket) => {
                 rooms[i].players.push({ id: socket.id, userName: data.userName, word: '',roundsWon:0 })
                 players = rooms[i].players.map(player => player.userName)
                 io.to(String(data.room)).emit('players', players)
-                return
+                // return
             }
         }
+        availableRooms = maxRooms.map(room => {
+            const players = room.players.map(player=>player.userName)
+            const roomNumber = room.room
+            return(
+                {roomNumber,players}
+            )
+        })        
+        console.log(availableRooms, 'available rooms after joining a room');
+        io.emit('available_rooms', availableRooms)
     })
 
     /* allows users to leave rooms */
