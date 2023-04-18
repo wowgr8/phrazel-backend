@@ -70,7 +70,15 @@ io.on("connection", (socket) => {
     // socket.on("check_available_rooms",()=>{
     if (rooms.length > 0) {
         maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
-        availableRooms = maxRooms.map(room => room.room)
+
+        availableRooms = maxRooms.map(room => {
+            const players = room.players.map(player=>player.userName)
+            const roomNumber = room.room
+            return(
+                {roomNumber,players}
+            )
+        })  
+        console.log(availableRooms, 'available rooms as soon we connect');
         io.to(socket.id).emit('available_rooms', availableRooms)
     }
     // })
@@ -94,8 +102,14 @@ io.on("connection", (socket) => {
         })
 
         maxRooms = rooms.filter(room => room.players.length < 10)
-        availableRooms = maxRooms.map(room => room.room)
-        console.log(availableRooms, 'available rooms');
+        availableRooms = maxRooms.map(room => {
+            const players = room.players.map(player=>player.userName)
+            const roomNumber = room.room
+            return(
+                {roomNumber,players}
+            )
+        })        
+        console.log(availableRooms, 'available rooms after creating a room');
         io.emit('available_rooms', availableRooms)
     })
 
@@ -109,9 +123,18 @@ io.on("connection", (socket) => {
                 rooms[i].players.push({ id: socket.id, userName: data.userName, word: '', roundsWon: 0 })
                 players = rooms[i].players.map(player => player.userName)
                 io.to(String(data.room)).emit('players', players)
-                return
+                // return
             }
         }
+        availableRooms = maxRooms.map(room => {
+            const players = room.players.map(player=>player.userName)
+            const roomNumber = room.room
+            return(
+                {roomNumber,players}
+            )
+        })        
+        console.log(availableRooms, 'available rooms after joining a room');
+        io.emit('available_rooms', availableRooms)
     })
 
     /* allows users to leave rooms */
