@@ -10,47 +10,46 @@ const register = async (req, res) => {
   if (existingUsername) {
     return res
       .status(StatusCodes.BAD_REQUEST)
-      .json({ message: 'Username already exists' });
+      .json({
+        message: 'Username already exists',
+        hasUsername: true,
+      });
   }
-
-  /* Set email to null if it is empty */
-  const emailValue = email === "" ? null : email;
-
-  /* Check if email already exists */
-  const existingEmail = await User.findOne({ email: emailValue });
-  if (existingEmail && existingEmail !== null) {
+  if (!username) {
     return res
       .status(StatusCodes.BAD_REQUEST)
-      .json({ message: 'Email already exists' });
+      .json({
+        message: 'Username is required'
+      });
   }
-  /** allow multiple users sign up without an email */
-  //TODO: email verification does not allow multiple null emails
-  if (emailValue === null) {
-    const user = await User.create({ username, email: null, password });
-    const token = user.createJWT();
-    return res
-      .status(StatusCodes.CREATED)
-      .json({ user: { username: user.username }, token });
-  };
 
-  const user = await User.create({ username, email: emailValue, password });
+  /* Check if email is empty */
+  if (!email) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({
+        message: 'Email is required'
+      });
+  }
+
+  /* Check if email already exists */
+  const existingEmail = await User.findOne({ email });
+  if (existingEmail) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({
+        message: 'Email already exists',
+        hasEmail: true,
+      });
+  }
+
+  /* create user profile if  */
+  const user = await User.create({ username, email, password });
   const token = user.createJWT();
   res
     .status(StatusCodes.CREATED)
     .json({ user: { username: user.username }, token });
 };
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /** log in authentication for exiting users */

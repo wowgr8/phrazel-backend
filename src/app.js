@@ -1,15 +1,63 @@
-const app = require('./server');
+/* module setup */
+require('dotenv').config();
+const express = require('express');
 require('express-async-errors');
-const http = require('http')
-const { Server } = require('socket.io')
-const server = http.createServer(app)
+const session = require('express-session');
+const http = require('http');
+const MongoDBStore = require("connect-mongodb-session")(session);
+const connectDB = require('./db/connect');
+const app = express();
 
+/** extra security packages */
+const cors = require('cors')
+const favicon = require('express-favicon');
+const logger = require('morgan')
+
+
+app.use(express.json());
+app.use(cors());
+app.use(express.urlencoded({ extended: false }));
+app.use(logger('dev'));
+app.use(express.static('public'))
+app.use(favicon(__dirname + '/public/favicon.ico'));
+
+/* routers */
+const authRouter = require('./routes/auth');
+const mainRouter = require('./routes/mainRouter.js');
+app.use('/api/v1/auth', authRouter)
+app.use('/api/v1', mainRouter);
+
+/* middleware */
+const notFoundMiddleware = require('./middleware/not-found');
+const errorHandlerMiddleware = require('./middleware/error-handler');
+app.use(notFoundMiddleware);
+app.use(errorHandlerMiddleware);
+
+
+/* database connection */
+const url = process.env.MONGO_URI;
+
+const store = new MongoDBStore({
+    // may throw an error, which won't be caught
+    uri: url,
+    collection: "mySessions",
+});
+store.on("error", function (error) {
+    console.log(error);
+});
+
+
+const server = http.createServer(app);
+const { Server } = require("socket.io");
 const io = new Server(server, {
     cors: {
         origin: "http://localhost:3000",
         methods: ["GET", "POST"]
     }
 })
+
+
+/**************  sockets start below *****************/
 
 let rooms = []
 /* initial user connection to sockets */
@@ -18,10 +66,11 @@ io.on("connection", (socket) => {
     console.log(`User ${socket.id} connected`);
 
 
-    
+
     // socket.on("check_available_rooms",()=>{
     if (rooms.length > 0) {
         maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
+
         availableRooms = maxRooms.map(room => {
             const players = room.players.map(player=>player.userName)
             const roomNumber = room.room
@@ -46,9 +95,9 @@ io.on("connection", (socket) => {
             words: [],
             players: [{
                 id: socket.id,
-                userName: data, 
+                userName: data,
                 word: '',
-                roundsWon:0
+                roundsWon: 0
             }]
         })
 
@@ -71,7 +120,7 @@ io.on("connection", (socket) => {
 
         for (let i = 0; i < rooms.length; i++) {
             if (rooms[i].room == data.room) {
-                rooms[i].players.push({ id: socket.id, userName: data.userName, word: '',roundsWon:0 })
+                rooms[i].players.push({ id: socket.id, userName: data.userName, word: '', roundsWon: 0 })
                 players = rooms[i].players.map(player => player.userName)
                 io.to(String(data.room)).emit('players', players)
                 // return
@@ -125,62 +174,62 @@ io.on("connection", (socket) => {
 
                 console.log("All players ready");
                 io.to(String(rooms[i].room)).emit('all_players_ready')
-            } 
-        }
-    })
-
-    socket.on('start_game',(data)=>{
-        for (let i=0; i<rooms.length; i++){
-            if(rooms[i].room==data) {
-                rooms[i].playersGuessed=0
-                let random = Math.floor(Math.random()*rooms[i].words.length)
-                let wordToGuess = rooms[i].words.splice(random,1)[0]
-                rooms[i].wordToGuess = wordToGuess
-                for(const player of rooms[i].players ){
-                    if(player.word!==wordToGuess){
-                        io.to(player.id).emit('word_to_guess', wordToGuess.length)
-                    }else{
-                        io.to(player.id).emit('guessing_your_word')
-                    }
-                }
-                
             }
         }
     })
 
-    socket.on('guess_word',data=>{
-        for(const room of rooms){
-            if(room.room==data.room && room.wordToGuess===data.word) {
-                
+    socket.on('start_game', (data) => {
+        for (let i = 0; i < rooms.length; i++) {
+            if (rooms[i].room == data) {
+                rooms[i].playersGuessed = 0
+                let random = Math.floor(Math.random() * rooms[i].words.length)
+                let wordToGuess = rooms[i].words.splice(random, 1)[0]
+                rooms[i].wordToGuess = wordToGuess
+                for (const player of rooms[i].players) {
+                    if (player.word !== wordToGuess) {
+                        io.to(player.id).emit('word_to_guess', wordToGuess.length)
+                    } else {
+                        io.to(player.id).emit('guessing_your_word')
+                    }
+                }
+
+            }
+        }
+    })
+
+    socket.on('guess_word', data => {
+        for (const room of rooms) {
+            if (room.room == data.room && room.wordToGuess === data.word) {
+
                 io.to(socket.id).emit('right')
                 //When a player guesses right we increase the playersGuessed count and we check if all the rest guessed
                 //If so we tell the host he can start next round
                 room.playersGuessed++
-                if(room.playersGuessed==1){
+                if (room.playersGuessed == 1) {
                     //all the next code is to keep track of the rounds won of every player
-                    idsArr = room.players.map(player=>player.id)
+                    idsArr = room.players.map(player => player.id)
                     const index = idsArr.indexOf(socket.id)
                     room.players[index].roundsWon++
                 }
-                if(room.playersGuessed==(room.players.length-1)) {
+                if (room.playersGuessed == (room.players.length - 1)) {
                     //We check if we used all the words of all players, if not we tell the host(players[0]) can start next round
-                    if(room.words.length>0) io.to(String(room.players[0].id)).emit('all_players_guessed')
+                    if (room.words.length > 0) io.to(String(room.players[0].id)).emit('all_players_guessed')
                     //If we used all the words of all players the game is over
                     else {
                         io.to(String(room.room)).emit('game_over')
-                        scoreArr = room.players.map(player=>player.roundsWon)
-                        const i= scoreArr.indexOf(Math.max(...scoreArr))
-                        console.log(room.players[i],'player with high score');
-                        io.to(String(room.room)).except(String(room.players[i].id)).emit('winner',room.players[i].userName)
+                        scoreArr = room.players.map(player => player.roundsWon)
+                        const i = scoreArr.indexOf(Math.max(...scoreArr))
+                        console.log(room.players[i], 'player with high score');
+                        io.to(String(room.room)).except(String(room.players[i].id)).emit('winner', room.players[i].userName)
                         io.to(String(room.players[i].id)).emit('you_won')
                         //When the game is over we need to reset some values of every player because maybe the players want to play a new game 
-                        for(const player of room.players){
+                        for (const player of room.players) {
                             player.word = ''
-                            player.roundsWon=0
+                            player.roundsWon = 0
                         }
                     }
                 }
-                
+
             }
         }
     })
@@ -195,12 +244,13 @@ io.on("connection", (socket) => {
 })
 
 const port = process.env.PORT || 4000;
-const start = () => {
+const start = async () => {
     try {
+        await connectDB(url);
         server.listen(port, () =>
             console.log(`app is listening on port ${port}...`));
     } catch (error) {
         console.log(error);
     }
 };
-start();
+start();    
