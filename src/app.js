@@ -212,6 +212,12 @@ io.on("connection", (socket) => {
                     room.players[index].roundsWon++
                 }
                 if (room.playersGuessed == (room.players.length - 1)) {
+
+                    const gameScore = room.players.map(player => {
+                        return {player:player.userName, roundsWon:player.roundsWon}
+                    })
+                    // Here we send the gameScore, an array with rounds won of every player
+                    io.to(String(room.room)).emit('game_score', gameScore)
                     //We check if we used all the words of all players, if not we tell the host(players[0]) can start next round
                     if (room.words.length > 0) io.to(String(room.players[0].id)).emit('all_players_guessed')
                     //If we used all the words of all players the game is over
