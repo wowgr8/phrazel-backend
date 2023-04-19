@@ -247,6 +247,14 @@ io.on("connection", (socket) => {
                 io.to(socket.id).emit('right')
         }
     })
+
+    // Used for game chat in GameChat.js
+
+    // Listens for message emitted by the front end
+    socket.on('send_message', data => {
+        // emits data back to the front end event listener in the useEffect
+        socket.broadcast.emit('receive_message', data )
+    })
 })
 
 const port = process.env.PORT || 4000;
