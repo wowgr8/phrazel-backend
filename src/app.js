@@ -205,6 +205,7 @@ io.on("connection", (socket) => {
                 //When a player guesses right we increase the playersGuessed count and we check if all the rest guessed
                 //If so we tell the host he can start next round
                 room.playersGuessed++
+
                 if (room.playersGuessed == 1) {
                     //all the next code is to keep track of the rounds won of every player
                     idsArr = room.players.map(player => player.id)
@@ -252,8 +253,9 @@ io.on("connection", (socket) => {
 
     // Listens for message emitted by the front end
     socket.on('send_message', data => {
-        // emits data back to the front end event listener in the useEffect
-        socket.broadcast.emit('receive_message', data )
+        // emits data back to everyone including the sender
+        io.sockets.in(data.room).emit('receive_message', data );
+        ///// WIP - the host is the only player who is not able to send messages
     })
 })
 
