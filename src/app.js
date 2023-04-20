@@ -6,6 +6,7 @@ const session = require('express-session');
 const http = require('http');
 const MongoDBStore = require("connect-mongodb-session")(session);
 const connectDB = require('./db/connect');
+const authenticateUser = require('./middleware/authentication')
 const app = express();
 
 /** extra security packages */
@@ -26,7 +27,7 @@ const authRouter = require('./routes/auth');
 const mainRouter = require('./routes/mainRouter.js');
 const gamesRouter = require('./routes/games.js')
 app.use('/api/v1/auth', authRouter)
-app.use('/api/v1', mainRouter,gamesRouter);
+app.use('/api/v1',authenticateUser, mainRouter,gamesRouter);
 
 /* middleware */
 const notFoundMiddleware = require('./middleware/not-found');

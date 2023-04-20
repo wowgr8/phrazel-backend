@@ -10,7 +10,7 @@ const getGames = async (req,res) =>{
 }
 const updateGames = async (req,res) => {
     const {body: {gamesWon}, user:{userId}, params:{id:userName}} = req
-    const user = await User.findOneAndUpdate({gamesWon:gamesWon}, req.body,{new:true, runValidators:true})
+    const user = await User.findOneAndUpdate({username:userName}, req.body,{new:true, runValidators:true})
     if(!user) throw new NotFoundError (`No user with name ${userName}`)
     res.status(StatusCodes.OK).json({user})
 }
