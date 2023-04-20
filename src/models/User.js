@@ -22,6 +22,10 @@ const UserSchema = new mongoose.Schema({
     required: [true, 'Please provide password'],
     minlength: 5,
   },
+  gamesWon:{
+    type: Number,
+    default: 0
+  }
 })
 
 UserSchema.pre('save', async function () {

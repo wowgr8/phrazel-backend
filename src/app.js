@@ -24,8 +24,9 @@ app.use(favicon(__dirname + '/public/favicon.ico'));
 /* routers */
 const authRouter = require('./routes/auth');
 const mainRouter = require('./routes/mainRouter.js');
+const gamesRouter = require('./routes/games.js')
 app.use('/api/v1/auth', authRouter)
-app.use('/api/v1', mainRouter);
+app.use('/api/v1', mainRouter,gamesRouter);
 
 /* middleware */
 const notFoundMiddleware = require('./middleware/not-found');
