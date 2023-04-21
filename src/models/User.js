@@ -22,7 +22,7 @@ const UserSchema = new mongoose.Schema({
     required: [true, 'Please provide password'],
     minlength: 5,
   },
-  gamesWon:{
+  userWon:{
     type: Number,
     default: 0
   }

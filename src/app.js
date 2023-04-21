@@ -25,9 +25,9 @@ app.use(favicon(__dirname + '/public/favicon.ico'));
 /* routers */
 const authRouter = require('./routes/auth');
 const mainRouter = require('./routes/mainRouter.js');
-const gamesRouter = require('./routes/games.js')
+const userRouter = require('./routes/user.js')
 app.use('/api/v1/auth', authRouter)
-app.use('/api/v1',authenticateUser, mainRouter,gamesRouter);
+app.use('/api/v1',authenticateUser, mainRouter,userRouter);
 
 /* middleware */
 const notFoundMiddleware = require('./middleware/not-found');
@@ -158,7 +158,7 @@ io.on("connection", (socket) => {
     })
 
     /* allows users to send word or phreases
-     * only starts games when all players have sent a word
+     * only starts user when all players have sent a word
      */
     socket.on('send_word', (data) => {
         // socket.to(data.room).emit('receive_message',data.message)
