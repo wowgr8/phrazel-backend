@@ -254,7 +254,8 @@ io.on("connection", (socket) => {
     // Listens for message emitted by the front end
     socket.on('send_message', data => {
         // emits data back to everyone including the sender
-        io.sockets.in(data.room).emit('receive_message', data );
+        console.log("send message data:", data);
+        io.to(String(data.room)).emit('receive_message', data );
         ///// WIP - the host is the only player who is not able to send messages
     })
 })
