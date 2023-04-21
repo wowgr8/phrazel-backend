@@ -10,6 +10,7 @@ const getUser = async (req,res) =>{
 }
 const updateUser = async (req,res) => {
     const {params:{id:_id}} = req
+    console.log(req.body,'body of update');
     const user = await User.findOneAndUpdate({_id:_id}, req.body,{new:true, runValidators:true})
     if(!user) throw new NotFoundError (`No user with id ${_id}`)
     res.status(StatusCodes.OK).json({user})
