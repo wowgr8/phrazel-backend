@@ -250,13 +250,10 @@ io.on("connection", (socket) => {
     })
 
     // Used for game chat in GameChat.js
-
     // Listens for message emitted by the front end
     socket.on('send_message', data => {
         // emits data back to everyone including the sender
-        console.log("send message data:", data);
         io.to(String(data.room)).emit('receive_message', data );
-        ///// WIP - the host is the only player who is not able to send messages
     })
 })
 
