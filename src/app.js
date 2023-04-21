@@ -148,10 +148,12 @@ io.on("connection", (socket) => {
                 arrayOfPlayersIds= rooms[i].players.map(player=>player.id)
                 const index = arrayOfPlayersIds.indexOf(socket.id)
                 rooms[i].players.splice(index, 1)
-                playersLeft = rooms[i].players.map(player => player.userName)
-                io.to(String(data)).emit('players', playersLeft)
                 if (rooms[i].players.length===0) rooms.splice(i, 1)
-                // return
+                else{
+                    playersLeft = rooms[i].players.map(player => player.userName)
+                    io.to(String(data)).emit('players', playersLeft)
+                }
+
             }
         }
         maxRooms = rooms.filter(room => room.players.length < 10)
