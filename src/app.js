@@ -27,7 +27,8 @@ const authRouter = require('./routes/auth');
 const mainRouter = require('./routes/mainRouter.js');
 const userRouter = require('./routes/user.js')
 app.use('/api/v1/auth', authRouter)
-app.use('/api/v1',authenticateUser, mainRouter,userRouter);
+app.use('/api/v1',authenticateUser,userRouter);
+app.use('/', mainRouter)
 
 /* middleware */
 const notFoundMiddleware = require('./middleware/not-found');
