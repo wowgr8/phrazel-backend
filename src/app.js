@@ -146,11 +146,27 @@ io.on("connection", (socket) => {
         socket.leave(data)
         for (let i = 0; i < rooms.length; i++) {
             if (rooms[i].room == data) {
-                const index = rooms[i].players.indexOf(socket.id)
+                arrayOfPlayersIds= rooms[i].players.map(player=>player.id)
+                const index = arrayOfPlayersIds.indexOf(socket.id)
                 rooms[i].players.splice(index, 1)
-                return
+                if (rooms[i].players.length===0) rooms.splice(i, 1)
+                else{
+                    playersLeft = rooms[i].players.map(player => player.userName)
+                    io.to(String(data)).emit('players', playersLeft)
+                }
+
             }
         }
+        maxRooms = rooms.filter(room => room.players.length < 10)
+        availableRooms = maxRooms.map(room => {
+            const players = room.players.map(player=>player.userName)
+            const roomNumber = room.room
+            return(
+                {roomNumber,players}
+            )
+        })        
+        console.log(availableRooms, 'available rooms after leaving a room');
+        io.emit('available_rooms', availableRooms)
     })
 
     /* disconnects user from socket */
