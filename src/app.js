@@ -6,6 +6,7 @@ const session = require('express-session');
 const http = require('http');
 const MongoDBStore = require("connect-mongodb-session")(session);
 const connectDB = require('./db/connect');
+const authenticateUser = require('./middleware/authentication')
 const app = express();
 
 /** extra security packages */
@@ -24,8 +25,10 @@ app.use(favicon(__dirname + '/public/favicon.ico'));
 /* routers */
 const authRouter = require('./routes/auth');
 const mainRouter = require('./routes/mainRouter.js');
+const userRouter = require('./routes/user.js')
 app.use('/api/v1/auth', authRouter)
-app.use('/api/v1', mainRouter);
+app.use('/api/v1',authenticateUser,userRouter);
+app.use('/', mainRouter)
 
 /* middleware */
 const notFoundMiddleware = require('./middleware/not-found');
@@ -156,7 +159,7 @@ io.on("connection", (socket) => {
     })
 
     /* allows users to send word or phreases
-     * only starts games when all players have sent a word
+     * only starts user when all players have sent a word
      */
     socket.on('send_word', (data) => {
         // socket.to(data.room).emit('receive_message',data.message)

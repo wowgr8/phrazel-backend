@@ -48,7 +48,7 @@ const register = async (req, res) => {
   const token = user.createJWT();
   res
     .status(StatusCodes.CREATED)
-    .json({ user: { username: user.username }, token });
+    .json({ user, token });
 };
 
 
@@ -71,7 +71,7 @@ const login = async (req, res) => {
   }
 
   const token = user.createJWT();
-  res.status(StatusCodes.OK).json({ user: { username: user.username }, token });
+  res.status(StatusCodes.OK).json({ user, token });
 };
 
 module.exports = {
