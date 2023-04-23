@@ -27,7 +27,8 @@ const authRouter = require('./routes/auth');
 const mainRouter = require('./routes/mainRouter.js');
 const userRouter = require('./routes/user.js')
 app.use('/api/v1/auth', authRouter)
-app.use('/api/v1',authenticateUser, mainRouter,userRouter);
+app.use('/api/v1',authenticateUser,userRouter);
+app.use('/', mainRouter)
 
 /* middleware */
 const notFoundMiddleware = require('./middleware/not-found');
@@ -223,6 +224,7 @@ io.on("connection", (socket) => {
                 //When a player guesses right we increase the playersGuessed count and we check if all the rest guessed
                 //If so we tell the host he can start next round
                 room.playersGuessed++
+
                 if (room.playersGuessed == 1) {
                     //all the next code is to keep track of the rounds won of every player
                     idsArr = room.players.map(player => player.id)
@@ -264,6 +266,13 @@ io.on("connection", (socket) => {
             if (room.room == data.room && room.wordToGuess === data.word)
                 io.to(socket.id).emit('right')
         }
+    })
+
+    // Used for game chat in GameChat.js
+    // Listens for message emitted by the front end
+    socket.on('send_message', data => {
+        // emits data back to everyone including the sender
+        io.to(String(data.room)).emit('receive_message', data );
     })
 })
 
