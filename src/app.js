@@ -26,9 +26,18 @@ app.use(favicon(__dirname + '/public/favicon.ico'));
 const authRouter = require('./routes/auth');
 const mainRouter = require('./routes/mainRouter.js');
 const userRouter = require('./routes/user.js')
+// const users = require('./routes/activeUsers')
+let activeUsersApp = []
+
+
 app.use('/api/v1/auth', authRouter)
 app.use('/api/v1',authenticateUser,userRouter);
 app.use('/', mainRouter)
+app.get("/active-users", (req, res) => {
+    res.send(activeUsersApp);
+});
+// app.use('/', users)
+
 
 /* middleware */
 const notFoundMiddleware = require('./middleware/not-found');
@@ -66,10 +75,11 @@ let rooms = []
 /* initial user connection to sockets */
 io.on("connection", (socket) => {
     // maxRooms = rooms.filter(room => room.players.length<10)
-    console.log(`User ${socket.id} connected`);
-
-
-
+    console.log(`User connected`);
+    socket.on('user_name',userName => {
+        activeUsersApp.push({id:socket.id, userName:userName, room:'lobby' })
+        console.log(activeUsersApp,'active users after connecting');
+    })
     // socket.on("check_available_rooms",()=>{
     if (rooms.length > 0) {
         maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
@@ -92,6 +102,11 @@ io.on("connection", (socket) => {
     socket.on('create_room', data => {
         socket.join(String(rooms.length + 1))
         io.to(socket.id).emit('room_number', rooms.length + 1)
+
+        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+        const index = arrayOfUsersIds.indexOf(socket.id)
+        activeUsersApp[index] = {...activeUsersApp[index], room:rooms.length + 1}
+        console.log(activeUsersApp,'active users after create room');
 
         rooms.push({
             room: rooms.length + 1,
@@ -138,6 +153,11 @@ io.on("connection", (socket) => {
         })        
         console.log(availableRooms, 'available rooms after joining a room');
         io.emit('available_rooms', availableRooms)
+
+        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+        const index = arrayOfUsersIds.indexOf(socket.id)
+        activeUsersApp[index] = {...activeUsersApp[index], room:data.room}
+        console.log(activeUsersApp,'active users after joining a room');
     })
 
     /* allows users to leave rooms */
@@ -156,6 +176,10 @@ io.on("connection", (socket) => {
                 }
 
             }
+        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+        const index = arrayOfUsersIds.indexOf(socket.id)
+        activeUsersApp[index] = {...activeUsersApp[index], room:'lobby'}
+        console.log(activeUsersApp,'active users after leaving a room');
         }
         maxRooms = rooms.filter(room => room.players.length < 10)
         availableRooms = maxRooms.map(room => {
@@ -172,6 +196,11 @@ io.on("connection", (socket) => {
     /* disconnects user from socket */
     socket.on('disconnect', () => {
         console.log('user disconnected');
+        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+        const index = arrayOfUsersIds.indexOf(socket.id)
+        activeUsersApp.splice(index,1)
+        console.log(activeUsersApp,'active users after disconnecting');
+
     })
 
     /* allows users to send word or phreases
@@ -275,7 +304,6 @@ io.on("connection", (socket) => {
         io.to(String(data.room)).emit('receive_message', data );
     })
 })
-
 const port = process.env.PORT || 4000;
 const start = async () => {
     try {
