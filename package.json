@@ -25,6 +25,7 @@
 		"jsonwebtoken": "^9.0.0",
 		"mongoose": "^7.0.3",
 		"morgan": "^1.10.0",
+		"node-fetch": "^2.6.9",
 		"nodemon": "^2.0.21",
 		"openai": "^3.2.1",
 		"react-router-dom": "^6.10.0",

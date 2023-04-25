@@ -8,6 +8,7 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 const connectDB = require('./db/connect');
 const authenticateUser = require('./middleware/authentication')
 const app = express();
+const fetch = require("node-fetch") ;
 
 /** extra security packages */
 const cors = require('cors')
@@ -26,6 +27,7 @@ app.use(favicon(__dirname + '/public/favicon.ico'));
 const authRouter = require('./routes/auth');
 const mainRouter = require('./routes/mainRouter.js');
 const userRouter = require('./routes/user.js')
+const userNamesRouter = require('./routes/userNames')
 // const users = require('./routes/activeUsers')
 let activeUsersApp = []
 
@@ -36,6 +38,7 @@ app.use('/', mainRouter)
 app.get("/active-users", (req, res) => {
     res.send(activeUsersApp);
 });
+app.use('/', userNamesRouter)
 // app.use('/', users)
 
 
@@ -68,17 +71,47 @@ const io = new Server(server, {
     }
 })
 
-
+let userNames = []
 /**************  sockets start below *****************/
+
+//This function is called after connects to mongoDB (line 330 aprox) and pulls all the registered user names
+async function getUserNames(){
+    try {
+        const response = await fetch("http://localhost:4000/userNames");
+        // console.log(`getUserNames responds with status code ${response.status}`);
+        const data = await response.json();
+        //We'll use this array when a none registered user disconnects
+        registeredUserNames = data.userNames
+        console.log(registeredUserNames,'registered user names');
+        //We'll use this array later to check if an user name is already taken and if not added to this arr, this for players who don't want to register.
+        userNames = [...data.userNames]
+    } catch (error) {
+        console.log("Error occurred: ",error);
+    }
+}
 
 let rooms = []
 /* initial user connection to sockets */
 io.on("connection", (socket) => {
-    // maxRooms = rooms.filter(room => room.players.length<10)
     console.log(`User connected`);
-    socket.on('user_name',userName => {
+    //At the moment of connection we receive the name of the user who is connecting on the event user_name.
+    socket.on('user_name',({userName,registeredUser}) => {
+        console.log('event user_name');
+        //We check if it's a registered user
+        if(!registeredUser) {
+            const existingUsername = userNames.includes(userName)
+            //If the user name exist we return an event to tell the front.
+            if(existingUsername) return socket.emit('existing_user_name',userName)
+            //If the user name does not exist we add this user name to the active users and UserNames to avoid repetitions.
+            else {
+                userNames.push(userName)
+                socket.emit('user_name_accepted')
+            }
+        }
+        // If The user is registered we just push the name to active users because the check was done at the registration 
         activeUsersApp.push({id:socket.id, userName:userName, room:'lobby' })
-        console.log(activeUsersApp,'active users after connecting');
+        console.log('userNames',userNames);
+        console.log('active users',activeUsersApp);
     })
     // socket.on("check_available_rooms",()=>{
     if (rooms.length > 0) {
@@ -196,11 +229,21 @@ io.on("connection", (socket) => {
     /* disconnects user from socket */
     socket.on('disconnect', () => {
         console.log('user disconnected');
-        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
-        const index = arrayOfUsersIds.indexOf(socket.id)
-        activeUsersApp.splice(index,1)
-        console.log(activeUsersApp,'active users after disconnecting');
-
+        //The next code is to check if we need to remove names from active users and remove usernames from not registered users.
+        if(activeUsersApp.length>0){
+            arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+            const index = arrayOfUsersIds.indexOf(socket.id)
+            userRegistered = registeredUserNames.includes(activeUsersApp[index].userName)
+            if(!userRegistered){
+                const i = userNames.indexOf(activeUsersApp[index].userName)
+                //Here is the case of a non registered user, so the userName can be used for others once disconnects
+                userNames.splice(i,1)
+            }
+            //Here we remove the user from active users.
+            activeUsersApp.splice(index,1)
+            console.log(activeUsersApp,'active users after disconnecting');
+            console.log(userNames,'NON AVAILABLE USER NAMES');
+        }
     })
 
     /* allows users to send word or phreases
@@ -310,6 +353,7 @@ const start = async () => {
         await connectDB(url);
         server.listen(port, () =>
             console.log(`app is listening on port ${port}...`));
+        getUserNames()
     } catch (error) {
         console.log(error);
     }
