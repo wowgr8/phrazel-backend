@@ -8,7 +8,8 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 const connectDB = require('./db/connect');
 const authenticateUser = require('./middleware/authentication')
 const app = express();
-const fetch = require("node-fetch") ;
+const fetch = require("node-fetch");
+const datamuse = require('datamuse');
 
 /** extra security packages */
 const cors = require('cors')
@@ -33,7 +34,7 @@ let activeUsersApp = []
 
 
 app.use('/api/v1/auth', authRouter)
-app.use('/api/v1',authenticateUser,userRouter);
+app.use('/api/v1', authenticateUser, userRouter);
 app.use('/', mainRouter)
 app.get("/active-users", (req, res) => {
     res.send(activeUsersApp);
@@ -75,18 +76,18 @@ let userNames = []
 /**************  sockets start below *****************/
 
 //This function is called after connects to mongoDB (line 330 aprox) and pulls all the registered user names
-async function getUserNames(){
+async function getUserNames() {
     try {
         const response = await fetch("http://localhost:4000/userNames");
         // console.log(`getUserNames responds with status code ${response.status}`);
         const data = await response.json();
         //We'll use this array when a none registered user disconnects
         registeredUserNames = data.userNames
-        console.log(registeredUserNames,'registered user names');
+        console.log(registeredUserNames, 'registered user names');
         //We'll use this array later to check if an user name is already taken and if not added to this arr, this for players who don't want to register.
         userNames = [...data.userNames]
     } catch (error) {
-        console.log("Error occurred: ",error);
+        console.log("Error occurred: ", error);
     }
 }
 
@@ -95,13 +96,13 @@ let rooms = []
 io.on("connection", (socket) => {
     console.log(`User connected`);
     //At the moment of connection we receive the name of the user who is connecting on the event user_name.
-    socket.on('user_name',({userName,registeredUser}) => {
+    socket.on('user_name', ({ userName, registeredUser }) => {
         console.log('event user_name');
         //We check if it's a registered user
-        if(!registeredUser) {
+        if (!registeredUser) {
             const existingUsername = userNames.includes(userName)
             //If the user name exist we return an event to tell the front.
-            if(existingUsername) return socket.emit('existing_user_name',userName)
+            if (existingUsername) return socket.emit('existing_user_name', userName)
             //If the user name does not exist we add this user name to the active users and UserNames to avoid repetitions.
             else {
                 userNames.push(userName)
@@ -109,21 +110,21 @@ io.on("connection", (socket) => {
             }
         }
         // If The user is registered we just push the name to active users because the check was done at the registration 
-        activeUsersApp.push({id:socket.id, userName:userName, room:'lobby' })
-        console.log('userNames',userNames);
-        console.log('active users',activeUsersApp);
+        activeUsersApp.push({ id: socket.id, userName: userName, room: 'lobby' })
+        console.log('userNames', userNames);
+        console.log('active users', activeUsersApp);
     })
     // socket.on("check_available_rooms",()=>{
     if (rooms.length > 0) {
         maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
 
         availableRooms = maxRooms.map(room => {
-            const players = room.players.map(player=>player.userName)
+            const players = room.players.map(player => player.userName)
             const roomNumber = room.room
-            return(
-                {roomNumber,players}
+            return (
+                { roomNumber, players }
             )
-        })  
+        })
         console.log(availableRooms, 'available rooms as soon we connect');
         io.to(socket.id).emit('available_rooms', availableRooms)
     }
@@ -136,10 +137,10 @@ io.on("connection", (socket) => {
         socket.join(String(rooms.length + 1))
         io.to(socket.id).emit('room_number', rooms.length + 1)
 
-        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+        arrayOfUsersIds = activeUsersApp.map(user => user.id)
         const index = arrayOfUsersIds.indexOf(socket.id)
-        activeUsersApp[index] = {...activeUsersApp[index], room:rooms.length + 1}
-        console.log(activeUsersApp,'active users after create room');
+        activeUsersApp[index] = { ...activeUsersApp[index], room: rooms.length + 1 }
+        console.log(activeUsersApp, 'active users after create room');
 
         rooms.push({
             room: rooms.length + 1,
@@ -154,12 +155,12 @@ io.on("connection", (socket) => {
 
         maxRooms = rooms.filter(room => room.players.length < 10)
         availableRooms = maxRooms.map(room => {
-            const players = room.players.map(player=>player.userName)
+            const players = room.players.map(player => player.userName)
             const roomNumber = room.room
-            return(
-                {roomNumber,players}
+            return (
+                { roomNumber, players }
             )
-        })        
+        })
         console.log(availableRooms, 'available rooms after creating a room');
         io.emit('available_rooms', availableRooms)
     })
@@ -178,19 +179,19 @@ io.on("connection", (socket) => {
             }
         }
         availableRooms = maxRooms.map(room => {
-            const players = room.players.map(player=>player.userName)
+            const players = room.players.map(player => player.userName)
             const roomNumber = room.room
-            return(
-                {roomNumber,players}
+            return (
+                { roomNumber, players }
             )
-        })        
+        })
         console.log(availableRooms, 'available rooms after joining a room');
         io.emit('available_rooms', availableRooms)
 
-        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+        arrayOfUsersIds = activeUsersApp.map(user => user.id)
         const index = arrayOfUsersIds.indexOf(socket.id)
-        activeUsersApp[index] = {...activeUsersApp[index], room:data.room}
-        console.log(activeUsersApp,'active users after joining a room');
+        activeUsersApp[index] = { ...activeUsersApp[index], room: data.room }
+        console.log(activeUsersApp, 'active users after joining a room');
     })
 
     /* allows users to leave rooms */
@@ -199,29 +200,29 @@ io.on("connection", (socket) => {
         socket.leave(data)
         for (let i = 0; i < rooms.length; i++) {
             if (rooms[i].room == data) {
-                arrayOfPlayersIds= rooms[i].players.map(player=>player.id)
+                arrayOfPlayersIds = rooms[i].players.map(player => player.id)
                 const index = arrayOfPlayersIds.indexOf(socket.id)
                 rooms[i].players.splice(index, 1)
-                if (rooms[i].players.length===0) rooms.splice(i, 1)
-                else{
+                if (rooms[i].players.length === 0) rooms.splice(i, 1)
+                else {
                     playersLeft = rooms[i].players.map(player => player.userName)
                     io.to(String(data)).emit('players', playersLeft)
                 }
 
             }
-        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
-        const index = arrayOfUsersIds.indexOf(socket.id)
-        activeUsersApp[index] = {...activeUsersApp[index], room:'lobby'}
-        console.log(activeUsersApp,'active users after leaving a room');
+            arrayOfUsersIds = activeUsersApp.map(user => user.id)
+            const index = arrayOfUsersIds.indexOf(socket.id)
+            activeUsersApp[index] = { ...activeUsersApp[index], room: 'lobby' }
+            console.log(activeUsersApp, 'active users after leaving a room');
         }
         maxRooms = rooms.filter(room => room.players.length < 10)
         availableRooms = maxRooms.map(room => {
-            const players = room.players.map(player=>player.userName)
+            const players = room.players.map(player => player.userName)
             const roomNumber = room.room
-            return(
-                {roomNumber,players}
+            return (
+                { roomNumber, players }
             )
-        })        
+        })
         console.log(availableRooms, 'available rooms after leaving a room');
         io.emit('available_rooms', availableRooms)
     })
@@ -230,19 +231,19 @@ io.on("connection", (socket) => {
     socket.on('disconnect', () => {
         console.log('user disconnected');
         //The next code is to check if we need to remove names from active users and remove usernames from not registered users.
-        if(activeUsersApp.length>0){
-            arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+        if (activeUsersApp.length > 0) {
+            arrayOfUsersIds = activeUsersApp.map(user => user.id)
             const index = arrayOfUsersIds.indexOf(socket.id)
             userRegistered = registeredUserNames.includes(activeUsersApp[index].userName)
-            if(!userRegistered){
+            if (!userRegistered) {
                 const i = userNames.indexOf(activeUsersApp[index].userName)
                 //Here is the case of a non registered user, so the userName can be used for others once disconnects
-                userNames.splice(i,1)
+                userNames.splice(i, 1)
             }
             //Here we remove the user from active users.
-            activeUsersApp.splice(index,1)
-            console.log(activeUsersApp,'active users after disconnecting');
-            console.log(userNames,'NON AVAILABLE USER NAMES');
+            activeUsersApp.splice(index, 1)
+            console.log(activeUsersApp, 'active users after disconnecting');
+            console.log(userNames, 'NON AVAILABLE USER NAMES');
         }
     })
 
@@ -256,7 +257,23 @@ io.on("connection", (socket) => {
                 for (player of rooms[i].players) {
                     if (player.id === socket.id) {
                         player.word = data.word
-                        rooms[i].words.push(data.word)
+                        /* checking if words are valid */
+                        const word = data.word.toLowerCase();
+                        datamuse.words({
+                            sp: word,
+                            max: 2
+                        }).then((results) => {
+                            if (results.length > 0) {
+                                player.word = word;
+                                console.log(`${word} is a valid word`);
+                                realWord = true;
+                                rooms[i].words.push(word);
+                            } else {
+                                console.log(`${word} is not a valid word`);
+                            }
+                        }).catch((error) => {
+                            console.error(error.message);
+                        });
                     }
                 }
             }
@@ -269,6 +286,7 @@ io.on("connection", (socket) => {
         }
     })
 
+    /* raondomly picking a submitted word and setting its synonyms*/
     socket.on('start_game', (data) => {
         for (let i = 0; i < rooms.length; i++) {
             if (rooms[i].room == data) {
@@ -278,7 +296,12 @@ io.on("connection", (socket) => {
                 rooms[i].wordToGuess = wordToGuess
                 for (const player of rooms[i].players) {
                     if (player.word !== wordToGuess) {
+
+                        console.log(wordToGuess, ' is the word to guess');
+                        const hint = synonyms(wordToGuess);
+
                         io.to(player.id).emit('word_to_guess', wordToGuess.length)
+                        io.to(player.id).emit('hint', hint) //sends hint to client
                     } else {
                         io.to(player.id).emit('guessing_your_word')
                     }
@@ -287,6 +310,24 @@ io.on("connection", (socket) => {
             }
         }
     })
+
+    const synonyms = (word) => {
+        return new Promise((resolve, reject) => {
+            datamuse.words({
+                rel_syn: word,
+                max: 2,
+            })
+                .then((synonyms) => {
+                    const hint = `Synonyms for ${word}: ${synonyms.map((s) => s.word).join(', ')}`;
+                    console.log(hint);
+                    resolve(hint);
+                })
+                .catch((error) => {
+                    console.error(error.message);
+                    reject(error.message);
+                });
+        });
+    };
 
     socket.on('guess_word', data => {
         for (const room of rooms) {
@@ -306,7 +347,7 @@ io.on("connection", (socket) => {
                 if (room.playersGuessed == (room.players.length - 1)) {
 
                     const gameScore = room.players.map(player => {
-                        return {player:player.userName, roundsWon:player.roundsWon}
+                        return { player: player.userName, roundsWon: player.roundsWon }
                     })
                     // Here we send the gameScore, an array with rounds won of every player
                     io.to(String(room.room)).emit('game_score', gameScore)
@@ -344,7 +385,7 @@ io.on("connection", (socket) => {
     // Listens for message emitted by the front end
     socket.on('send_message', data => {
         // emits data back to everyone including the sender
-        io.to(String(data.room)).emit('receive_message', data );
+        io.to(String(data.room)).emit('receive_message', data);
     })
 })
 const port = process.env.PORT || 4000;
