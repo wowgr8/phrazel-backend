@@ -74,31 +74,16 @@ const io = new Server(server, {
 
 
 const User = require('./models/User')
-//This function is called after connects to mongoDB (line 330 aprox) and pulls all the registered user names
-async function getUserNames() {
-    try {
-        const response = await fetch("http://localhost:4000/userNames");
-        // console.log(`getUserNames responds with status code ${response.status}`);
-        const data = await response.json();
-        //We'll use this array when a none registered user disconnects
-        registeredUserNames = data.userNames
-        console.log(registeredUserNames, 'registered user names');
-        //We'll use this array later to check if an user name is already taken and if not added to this arr, this for players who don't want to register.
-        userNames = [...data.userNames]
-    } catch (error) {
-        console.log("Error occurred: ", error);
-    }
-}
 
 let notAvailableUserNames = []
 let registeredUserNames
 let rooms = []
 
 //This function is called after connects to mongoDB (at the bottom of this file) and pulls all the registered user names
-const getUserNames = async (req,res) =>{
+const getUserNames = async (req, res) => {
     const users = await User.find()
     //We'll use this array later to check if an user name is already taken and if not added to this arr, this for players who don't want to register.
-    registeredUserNames = users.map(user=>user.username)
+    registeredUserNames = users.map(user => user.username)
     notAvailableUserNames = [...registeredUserNames]
 }
 
