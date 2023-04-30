@@ -281,6 +281,31 @@ io.on("connection", (socket) => {
         }
     })
 
+    socket.on('time_off',data => {
+        for (const room of rooms) {
+            //We look for the right room
+            if (room.room == data){
+                if (room.words.length > 0) io.to(room.players[0].id).emit('all_ready_for_next_round')
+                    //If we used all the words of all players the game is over
+                    else {
+                        io.to(String(room.room)).emit('game_over')
+                        scoreArr = room.players.map(player => player.roundsWon)
+                        //we find who has the highest score
+                        const i = scoreArr.indexOf(Math.max(...scoreArr))
+                        console.log(room.players[i], 'player with high score');
+                        //We tell the players who won the game
+                        io.to(String(room.room)).except(String(room.players[i].id)).emit('winner', room.players[i].userName)
+                        io.to(String(room.players[i].id)).emit('you_won')
+                        //When the game is over we need to reset some values of every player because maybe the players want to play a new game 
+                        for (const player of room.players) {
+                            player.word = ''
+                            player.roundsWon = 0
+                        }
+                    }
+            }
+        }
+    })
+
     socket.on('guess_word', data => {
         for (const room of rooms) {
             if (room.room == data.room && room.wordToGuess === data.word) {
@@ -304,7 +329,7 @@ io.on("connection", (socket) => {
                     // Here we send the gameScore, an array with rounds won of every player
                     io.to(String(room.room)).emit('game_score', gameScore)
                     //We check if we used all the words of all players, if not we tell the host(players[0]) can start next round
-                    if (room.words.length > 0) io.to(String(room.players[0].id)).emit('all_players_guessed')
+                    if (room.words.length > 0) io.to(String(room.players[0].id)).emit('all_ready_for_next_round')
                     //If we used all the words of all players the game is over
                     else {
                         io.to(String(room.room)).emit('game_over')
