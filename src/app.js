@@ -137,10 +137,10 @@ io.on("connection", (socket) => {
         socket.join(String(rooms.length + 1))
         io.to(socket.id).emit('room_number', rooms.length + 1)
 
-        roomOfActiveUser(socket.id,rooms.length + 1)
+        roomOfActiveUser(socket.id,String(rooms.length + 1))
 
         rooms.push({
-            room: rooms.length + 1,
+            room: String(rooms.length + 1),
             words: [],
             players: [{
                 id: socket.id,
@@ -209,34 +209,38 @@ io.on("connection", (socket) => {
     socket.on('disconnect', () => {
         console.log('user disconnected',socket.id)
         //We check to find from where we need to remove the player and the info of the player and we do it
-        for(let i = 0; i < rooms.length; i++){
-            for(let ind = 0; ind < rooms[i].players.length; ind++){
-                if(rooms[i].players[ind].id===socket.id){
-                    arrayOfPlayersIds= rooms[i].players.map(player=>player.id)
-                    const index = arrayOfPlayersIds.indexOf(socket.id)
-                    rooms[i].players.splice(index, 1)
-                    if (rooms[i].players.length===0) rooms.splice(i, 1)
-                    else{
-                        console.log(rooms[i].players,'players in room left');
-                        playersLeft = rooms[i].players.map(player => player.userName)
-                        io.to(String(rooms[i].room)).emit('players', playersLeft)
+        if(activeUsersApp.length>0){
+            for(let i = 0; i < rooms.length; i++){
+                for(let ind = 0; ind < rooms[i].players.length; ind++){
+                    if(rooms[i].players[ind].id===socket.id){
+                        arrayOfPlayersIds= rooms[i].players.map(player=>player.id)
+                        const index = arrayOfPlayersIds.indexOf(socket.id)
+                        rooms[i].players.splice(index, 1)
+                        if (rooms[i].players.length===0) rooms.splice(i, 1)
+                        else{
+                            console.log(rooms[i].players,'players in room left');
+                            playersLeft = rooms[i].players.map(player => player.userName)
+                            io.to(String(rooms[i].room)).emit('players', playersLeft)
+                        }
+                        availableRoomsFun('disconnect')
+                        //The next code is to check if we need to remove names from active users and remove usernames from not registered users.
+                        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+                        const indexB = arrayOfUsersIds.indexOf(socket.id)
+                        userRegistered = registeredUserNames.includes(activeUsersApp[indexB].userName)
+                        if(!userRegistered){
+                            const i = notAvailableUserNames.indexOf(activeUsersApp[indexB].userName)
+                            //Here is the case of a non registered user, so the userName can be used for others once disconnects
+                            notAvailableUserNames.splice(i,1)
+                        }
+                        //Here we remove the user from active users.
+                        activeUsersApp.splice(indexB,1)
+                        console.log(activeUsersApp, 'active users');
+                        console.log(notAvailableUserNames,'not available usenames ');
+                        return
                     }
-                    availableRoomsFun('disconnect')
-                    return
                 }
             }
         }
-        //The next code is to check if we need to remove names from active users and remove usernames from not registered users.
-        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
-        const index = arrayOfUsersIds.indexOf(socket.id)
-        userRegistered = registeredUserNames.includes(activeUsersApp[index].userName)
-        if(!userRegistered){
-            const i = notAvailableUserNames.indexOf(activeUsersApp[index].userName)
-            //Here is the case of a non registered user, so the userName can be used for others once disconnects
-            notAvailableUserNames.splice(i,1)
-        }
-        //Here we remove the user from active users.
-        activeUsersApp.splice(index,1)
         
     })
 
