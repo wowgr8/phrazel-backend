@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 require('express-async-errors');
 const session = require('express-session');
+const cookieParser = require('cookie-parser');
 const http = require('http');
 const MongoDBStore = require("connect-mongodb-session")(session);
 const connectDB = require('./db/connect');
@@ -17,6 +18,7 @@ const logger = require('morgan')
 
 
 app.use(express.json());
+app.use(cookieParser(process.env.JWT_SECRET));
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(logger('dev'));
@@ -32,7 +34,7 @@ let activeUsersApp = []
 
 
 app.use('/api/v1/auth', authRouter)
-app.use('/api/v1',authenticateUser,userRouter);
+app.use('/api/v1/user',authenticateUser,userRouter);
 app.use('/', mainRouter)
 app.get("/active-users", (req, res) => {
     res.send(activeUsersApp);

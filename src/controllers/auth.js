@@ -1,6 +1,8 @@
 const User = require('../models/User');
+const Token = require('../models/Token');
 const { StatusCodes } = require('http-status-codes');
 const { BadRequestError, UnauthenticatedError } = require('../errors');
+const { attachCookiesToResponse, createTokenUser } = require('../utils');
 
 const register = async (req, res) => {
   const { username, email, password } = req.body;
@@ -70,8 +72,13 @@ const login = async (req, res) => {
     throw new UnauthenticatedError('Invalid Credentials');
   }
 
-  const token = user.createJWT();
-  res.status(StatusCodes.OK).json({ user, token });
+  const token = await user.createJWT()
+
+  attachCookiesToResponse({ res, user: user });
+
+  return res.status(StatusCodes.OK).json({ user: { username: user.username }, token })
+
+
 };
 
 module.exports = {
