@@ -30,7 +30,6 @@ const authRouter = require('./routes/auth');
 const mainRouter = require('./routes/mainRouter.js');
 const userRouter = require('./routes/user.js')
 const userNamesRouter = require('./routes/userNames')
-// const users = require('./routes/activeUsers')
 let activeUsersApp = []
 
 
@@ -41,7 +40,6 @@ app.get("/active-users", (req, res) => {
     res.send(activeUsersApp);
 });
 app.use('/', userNamesRouter)
-// app.use('/', users)
 
 
 /* middleware */
@@ -73,78 +71,79 @@ const io = new Server(server, {
     }
 })
 
-let userNames = []
 /**************  sockets start below *****************/
 
-//This function is called after connects to mongoDB (line 330 aprox) and pulls all the registered user names
-async function getUserNames(){
-    try {
-        const response = await fetch("http://localhost:4000/userNames");
-        // console.log(`getUserNames responds with status code ${response.status}`);
-        const data = await response.json();
-        //We'll use this array when a none registered user disconnects
-        registeredUserNames = data.userNames
-        console.log(registeredUserNames,'registered user names');
-        //We'll use this array later to check if an user name is already taken and if not added to this arr, this for players who don't want to register.
-        userNames = [...data.userNames]
-    } catch (error) {
-        console.log("Error occurred: ",error);
-    }
+
+const User = require('./models/User')
+
+let notAvailableUserNames = []
+let registeredUserNames
+let rooms = []
+
+//This function is called after connects to mongoDB (at the bottom of this file) and pulls all the registered user names
+const getUserNames = async (req,res) =>{
+    const users = await User.find()
+    //We'll use this array later to check if an user name is already taken and if not added to this arr, this for players who don't want to register.
+    registeredUserNames = users.map(user=>user.username)
+    notAvailableUserNames = [...registeredUserNames]
 }
 
-let rooms = []
 /* initial user connection to sockets */
 io.on("connection", (socket) => {
     console.log(`User connected`);
-    //At the moment of connection we receive the name of the user who is connecting on the event user_name.
+    //At the moment of connection we receive the name of the user and if it's registered,
     socket.on('user_name',({userName,registeredUser}) => {
-        console.log('event user_name');
+        console.log(userName,registeredUser,'data from user_name event');
         //We check if it's a registered user
         if(!registeredUser) {
-            const existingUsername = userNames.includes(userName)
+            const existingUsername = notAvailableUserNames.includes(userName)
             //If the user name exist we return an event to tell the front.
             if(existingUsername) return socket.emit('existing_user_name',userName)
-            //If the user name does not exist we add this user name to the active users and UserNames to avoid repetitions.
+            //If the user name does not exist we add it to the notAvailableUserNames arr to avoid repetitions.
             else {
-                userNames.push(userName)
+                notAvailableUserNames.push(userName)
                 socket.emit('user_name_accepted')
+                console.log(`User ${userName} connected`);
             }
+        }
+        if (rooms.length > 0) {
+            availableRoomsFun('we connect')
         }
         // If The user is registered we just push the name to active users because the check was done at the registration 
         activeUsersApp.push({id:socket.id, userName:userName, room:'lobby' })
-        console.log('userNames',userNames);
-        console.log('active users',activeUsersApp);
     })
-    // socket.on("check_available_rooms",()=>{
-    if (rooms.length > 0) {
+    //maxRooms let us check we don't have more than 10 players in a room
+    function availableRoomsFun(reason){
         maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
-
         availableRooms = maxRooms.map(room => {
             const players = room.players.map(player=>player.userName)
             const roomNumber = room.room
             return(
                 {roomNumber,players}
             )
-        })  
-        console.log(availableRooms, 'available rooms as soon we connect');
-        io.to(socket.id).emit('available_rooms', availableRooms)
+        })
+        io.emit('available_rooms', availableRooms)
+        console.log(availableRooms, 'available rooms after',reason)
     }
-    // })
 
+    
+    //The next function let us track the room of every connected player
+    function roomOfActiveUser(id,room){
+        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+        const index = arrayOfUsersIds.indexOf(id)
+        activeUsersApp[index] = {...activeUsersApp[index], room:room}
 
+    }
 
     /* create a room function with a maximum number of 10 */
     socket.on('create_room', data => {
         socket.join(String(rooms.length + 1))
         io.to(socket.id).emit('room_number', rooms.length + 1)
 
-        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
-        const index = arrayOfUsersIds.indexOf(socket.id)
-        activeUsersApp[index] = {...activeUsersApp[index], room:rooms.length + 1}
-        console.log(activeUsersApp,'active users after create room');
+        roomOfActiveUser(socket.id,String(rooms.length + 1))
 
         rooms.push({
-            room: rooms.length + 1,
+            room: String(rooms.length + 1),
             words: [],
             players: [{
                 id: socket.id,
@@ -162,8 +161,7 @@ io.on("connection", (socket) => {
                 {roomNumber,players}
             )
         })        
-        console.log(availableRooms, 'available rooms after creating a room');
-        io.emit('available_rooms', availableRooms)
+        availableRoomsFun('creating a room')
     })
 
     /* allows users to join different rooms - prompts name upon joining */
@@ -176,7 +174,6 @@ io.on("connection", (socket) => {
                 rooms[i].players.push({ id: socket.id, userName: data.userName, word: '', roundsWon: 0 })
                 players = rooms[i].players.map(player => player.userName)
                 io.to(String(data.room)).emit('players', players)
-                // return
             }
         }
         availableRooms = maxRooms.map(room => {
@@ -186,19 +183,14 @@ io.on("connection", (socket) => {
                 {roomNumber,players}
             )
         })        
-        console.log(availableRooms, 'available rooms after joining a room');
-        io.emit('available_rooms', availableRooms)
-
-        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
-        const index = arrayOfUsersIds.indexOf(socket.id)
-        activeUsersApp[index] = {...activeUsersApp[index], room:data.room}
-        console.log(activeUsersApp,'active users after joining a room');
+        availableRoomsFun('joining a room')
+        roomOfActiveUser(socket.id,data.room)
     })
 
     /* allows users to leave rooms */
-    //TODO: remove username when leaving room
     socket.on('leave_room', (data) => {
         socket.leave(data)
+        //We check to find from where we need to remove the player and the info of the player and we do it
         for (let i = 0; i < rooms.length; i++) {
             if (rooms[i].room == data) {
                 arrayOfPlayersIds= rooms[i].players.map(player=>player.id)
@@ -209,50 +201,59 @@ io.on("connection", (socket) => {
                     playersLeft = rooms[i].players.map(player => player.userName)
                     io.to(String(data)).emit('players', playersLeft)
                 }
-
+                
             }
-        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
-        const index = arrayOfUsersIds.indexOf(socket.id)
-        activeUsersApp[index] = {...activeUsersApp[index], room:'lobby'}
-        console.log(activeUsersApp,'active users after leaving a room');
-        }
-        maxRooms = rooms.filter(room => room.players.length < 10)
-        availableRooms = maxRooms.map(room => {
-            const players = room.players.map(player=>player.userName)
-            const roomNumber = room.room
-            return(
-                {roomNumber,players}
-            )
-        })        
-        console.log(availableRooms, 'available rooms after leaving a room');
-        io.emit('available_rooms', availableRooms)
+        roomOfActiveUser(socket.id,'looby')
+        }    
+        availableRoomsFun('leaving a room')
     })
 
     /* disconnects user from socket */
     socket.on('disconnect', () => {
-        console.log('user disconnected');
-        //The next code is to check if we need to remove names from active users and remove usernames from not registered users.
+        console.log('user disconnected',socket.id)
+        //We check to find from where we need to remove the player and the info of the player and we do it
         if(activeUsersApp.length>0){
+            //The next code is to check if we need to remove names from active users and remove usernames from not registered users.
             arrayOfUsersIds= activeUsersApp.map(user=>user.id)
-            const index = arrayOfUsersIds.indexOf(socket.id)
-            userRegistered = registeredUserNames.includes(activeUsersApp[index].userName)
+            const indexB = arrayOfUsersIds.indexOf(socket.id)
+            userRegistered = registeredUserNames.includes(activeUsersApp[indexB].userName)
             if(!userRegistered){
-                const i = userNames.indexOf(activeUsersApp[index].userName)
+                const i = notAvailableUserNames.indexOf(activeUsersApp[indexB].userName)
                 //Here is the case of a non registered user, so the userName can be used for others once disconnects
-                userNames.splice(i,1)
+                notAvailableUserNames.splice(i,1)
             }
             //Here we remove the user from active users.
-            activeUsersApp.splice(index,1)
-            console.log(activeUsersApp,'active users after disconnecting');
-            console.log(userNames,'NON AVAILABLE USER NAMES');
+            activeUsersApp.splice(indexB,1)
+            console.log(activeUsersApp, 'active users');
+            console.log(notAvailableUserNames,'not available usenames ');
+            console.log('entre al IF');
+            for(let i = 0; i < rooms.length; i++){
+                console.log('entre al primer FOR');
+                for(let ind = 0; ind < rooms[i].players.length; ind++){
+                    console.log('entre al segundo FOR');
+                    if(rooms[i].players[ind].id===socket.id){
+                        arrayOfPlayersIds= rooms[i].players.map(player=>player.id)
+                        const index = arrayOfPlayersIds.indexOf(socket.id)
+                        rooms[i].players.splice(index, 1)
+                        if (rooms[i].players.length===0) rooms.splice(i, 1)
+                        else{
+                            console.log(rooms[i].players,'players in room left');
+                            playersLeft = rooms[i].players.map(player => player.userName)
+                            io.to(String(rooms[i].room)).emit('players', playersLeft)
+                        }
+                        availableRoomsFun('disconnect')
+                        return
+                    }
+                }
+            }
         }
+        
     })
 
     /* allows users to send word or phreases
      * only starts user when all players have sent a word
      */
     socket.on('send_word', (data) => {
-        // socket.to(data.room).emit('receive_message',data.message)
         for (let i = 0; i < rooms.length; i++) {
             if (rooms[i].room == data.room) {
                 for (player of rooms[i].players) {
