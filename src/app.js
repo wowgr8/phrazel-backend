@@ -91,6 +91,7 @@ io.on("connection", (socket) => {
     console.log(`User connected`);
     //At the moment of connection we receive the name of the user and if it's registered,
     socket.on('user_name',({userName,registeredUser}) => {
+        console.log(userName,registeredUser,'data from user_name event');
         //We check if it's a registered user
         if(!registeredUser) {
             const existingUsername = notAvailableUserNames.includes(userName)
@@ -210,8 +211,24 @@ io.on("connection", (socket) => {
         console.log('user disconnected',socket.id)
         //We check to find from where we need to remove the player and the info of the player and we do it
         if(activeUsersApp.length>0){
+            //The next code is to check if we need to remove names from active users and remove usernames from not registered users.
+            arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+            const indexB = arrayOfUsersIds.indexOf(socket.id)
+            userRegistered = registeredUserNames.includes(activeUsersApp[indexB].userName)
+            if(!userRegistered){
+                const i = notAvailableUserNames.indexOf(activeUsersApp[indexB].userName)
+                //Here is the case of a non registered user, so the userName can be used for others once disconnects
+                notAvailableUserNames.splice(i,1)
+            }
+            //Here we remove the user from active users.
+            activeUsersApp.splice(indexB,1)
+            console.log(activeUsersApp, 'active users');
+            console.log(notAvailableUserNames,'not available usenames ');
+            console.log('entre al IF');
             for(let i = 0; i < rooms.length; i++){
+                console.log('entre al primer FOR');
                 for(let ind = 0; ind < rooms[i].players.length; ind++){
+                    console.log('entre al segundo FOR');
                     if(rooms[i].players[ind].id===socket.id){
                         arrayOfPlayersIds= rooms[i].players.map(player=>player.id)
                         const index = arrayOfPlayersIds.indexOf(socket.id)
@@ -223,19 +240,6 @@ io.on("connection", (socket) => {
                             io.to(String(rooms[i].room)).emit('players', playersLeft)
                         }
                         availableRoomsFun('disconnect')
-                        //The next code is to check if we need to remove names from active users and remove usernames from not registered users.
-                        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
-                        const indexB = arrayOfUsersIds.indexOf(socket.id)
-                        userRegistered = registeredUserNames.includes(activeUsersApp[indexB].userName)
-                        if(!userRegistered){
-                            const i = notAvailableUserNames.indexOf(activeUsersApp[indexB].userName)
-                            //Here is the case of a non registered user, so the userName can be used for others once disconnects
-                            notAvailableUserNames.splice(i,1)
-                        }
-                        //Here we remove the user from active users.
-                        activeUsersApp.splice(indexB,1)
-                        console.log(activeUsersApp, 'active users');
-                        console.log(notAvailableUserNames,'not available usenames ');
                         return
                     }
                 }
