@@ -91,13 +91,13 @@ const getUserNames = async (req, res) => {
 io.on("connection", (socket) => {
     console.log(`User connected`);
     //At the moment of connection we receive the name of the user and if it's registered,
-    socket.on('user_name',({userName,registeredUser}) => {
-        console.log(userName,registeredUser,'data from user_name event');
+    socket.on('user_name', ({ userName, registeredUser }) => {
+        console.log(userName, registeredUser, 'data from user_name event');
         //We check if it's a registered user
-        if(!registeredUser) {
+        if (!registeredUser) {
             const existingUsername = notAvailableUserNames.includes(userName)
             //If the user name exist we return an event to tell the front.
-            if(existingUsername) return socket.emit('existing_user_name',userName)
+            if (existingUsername) return socket.emit('existing_user_name', userName)
             //If the user name does not exist we add it to the notAvailableUserNames arr to avoid repetitions.
             else {
                 notAvailableUserNames.push(userName)
@@ -109,10 +109,10 @@ io.on("connection", (socket) => {
             availableRoomsFun('we connect')
         }
         // If The user is registered we just push the name to active users because the check was done at the registration 
-        activeUsersApp.push({id:socket.id, userName:userName, room:'lobby' })
+        activeUsersApp.push({ id: socket.id, userName: userName, room: 'lobby' })
     })
     //maxRooms let us check we don't have more than 10 players in a room
-    function availableRoomsFun(reason){
+    function availableRoomsFun(reason) {
         maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
         availableRooms = maxRooms.map(room => {
             const players = room.players.map(player => player.userName)
@@ -122,15 +122,15 @@ io.on("connection", (socket) => {
             )
         })
         io.emit('available_rooms', availableRooms)
-        console.log(availableRooms, 'available rooms after',reason)
+        console.log(availableRooms, 'available rooms after', reason)
     }
 
-    
+
     //The next function let us track the room of every connected player
-    function roomOfActiveUser(id,room){
-        arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+    function roomOfActiveUser(id, room) {
+        arrayOfUsersIds = activeUsersApp.map(user => user.id)
         const index = arrayOfUsersIds.indexOf(id)
-        activeUsersApp[index] = {...activeUsersApp[index], room:room}
+        activeUsersApp[index] = { ...activeUsersApp[index], room: room }
 
     }
 
@@ -139,7 +139,7 @@ io.on("connection", (socket) => {
         socket.join(String(rooms.length + 1))
         io.to(socket.id).emit('room_number', rooms.length + 1)
 
-        roomOfActiveUser(socket.id,String(rooms.length + 1))
+        roomOfActiveUser(socket.id, String(rooms.length + 1))
 
         rooms.push({
             room: String(rooms.length + 1),
@@ -159,7 +159,7 @@ io.on("connection", (socket) => {
             return (
                 { roomNumber, players }
             )
-        })        
+        })
         availableRoomsFun('creating a room')
     })
 
@@ -181,9 +181,9 @@ io.on("connection", (socket) => {
             return (
                 { roomNumber, players }
             )
-        })        
+        })
         availableRoomsFun('joining a room')
-        roomOfActiveUser(socket.id,data.room)
+        roomOfActiveUser(socket.id, data.room)
     })
 
     /* allows users to leave rooms */
@@ -200,43 +200,43 @@ io.on("connection", (socket) => {
                     playersLeft = rooms[i].players.map(player => player.userName)
                     io.to(String(data)).emit('players', playersLeft)
                 }
-                
+
             }
-        roomOfActiveUser(socket.id,'looby')
-        }    
+            roomOfActiveUser(socket.id, 'looby')
+        }
         availableRoomsFun('leaving a room')
     })
 
     /* disconnects user from socket */
     socket.on('disconnect', () => {
-        console.log('user disconnected',socket.id)
+        console.log('user disconnected', socket.id)
         //We check to find from where we need to remove the player and the info of the player and we do it
-        if(activeUsersApp.length>0){
+        if (activeUsersApp.length > 0) {
             //The next code is to check if we need to remove names from active users and remove usernames from not registered users.
-            arrayOfUsersIds= activeUsersApp.map(user=>user.id)
+            arrayOfUsersIds = activeUsersApp.map(user => user.id)
             const indexB = arrayOfUsersIds.indexOf(socket.id)
             userRegistered = registeredUserNames.includes(activeUsersApp[indexB].userName)
-            if(!userRegistered){
+            if (!userRegistered) {
                 const i = notAvailableUserNames.indexOf(activeUsersApp[indexB].userName)
                 //Here is the case of a non registered user, so the userName can be used for others once disconnects
-                notAvailableUserNames.splice(i,1)
+                notAvailableUserNames.splice(i, 1)
             }
             //Here we remove the user from active users.
-            activeUsersApp.splice(indexB,1)
+            activeUsersApp.splice(indexB, 1)
             console.log(activeUsersApp, 'active users');
-            console.log(notAvailableUserNames,'not available usenames ');
+            console.log(notAvailableUserNames, 'not available usenames ');
             console.log('entre al IF');
-            for(let i = 0; i < rooms.length; i++){
+            for (let i = 0; i < rooms.length; i++) {
                 console.log('entre al primer FOR');
-                for(let ind = 0; ind < rooms[i].players.length; ind++){
+                for (let ind = 0; ind < rooms[i].players.length; ind++) {
                     console.log('entre al segundo FOR');
-                    if(rooms[i].players[ind].id===socket.id){
-                        arrayOfPlayersIds= rooms[i].players.map(player=>player.id)
+                    if (rooms[i].players[ind].id === socket.id) {
+                        arrayOfPlayersIds = rooms[i].players.map(player => player.id)
                         const index = arrayOfPlayersIds.indexOf(socket.id)
                         rooms[i].players.splice(index, 1)
-                        if (rooms[i].players.length===0) rooms.splice(i, 1)
-                        else{
-                            console.log(rooms[i].players,'players in room left');
+                        if (rooms[i].players.length === 0) rooms.splice(i, 1)
+                        else {
+                            console.log(rooms[i].players, 'players in room left');
                             playersLeft = rooms[i].players.map(player => player.userName)
                             io.to(String(rooms[i].room)).emit('players', playersLeft)
                         }
@@ -246,35 +246,21 @@ io.on("connection", (socket) => {
                 }
             }
         }
-        
+
     })
 
+
+
     /* allows users to send word or phreases
-     * only starts user when all players have sent a word
-     */
+   * only starts user when all players have sent a word
+   */
     socket.on('send_word', (data) => {
         for (let i = 0; i < rooms.length; i++) {
             if (rooms[i].room == data.room) {
                 for (player of rooms[i].players) {
                     if (player.id === socket.id) {
                         player.word = data.word
-                        /* checking if words are valid */
-                        const word = data.word.toLowerCase();
-                        datamuse.words({
-                            sp: word,
-                            max: 2
-                        }).then((results) => {
-                            if (results.length > 0) {
-                                player.word = word;
-                                console.log(`${word} is a valid word`);
-                                realWord = true;
-                                rooms[i].words.push(word);
-                            } else {
-                                console.log(`${word} is not a valid word`);
-                            }
-                        }).catch((error) => {
-                            console.error(error.message);
-                        });
+                        rooms[i].words.push(data.word)
                     }
                 }
             }
@@ -287,8 +273,9 @@ io.on("connection", (socket) => {
         }
     })
 
+
     /* raondomly picking a submitted word and setting its synonyms*/
-    socket.on('start_game', (data) => {
+    socket.on('start_game', async (data) => {
         for (let i = 0; i < rooms.length; i++) {
             if (rooms[i].room == data) {
                 rooms[i].playersGuessed = 0
@@ -297,20 +284,22 @@ io.on("connection", (socket) => {
                 rooms[i].wordToGuess = wordToGuess
                 for (const player of rooms[i].players) {
                     if (player.word !== wordToGuess) {
-
                         console.log(wordToGuess, ' is the word to guess');
-                        const hint = synonyms(wordToGuess);
-
-                        io.to(player.id).emit('word_to_guess', wordToGuess.length)
-                        io.to(player.id).emit('hint', hint) //sends hint to client
+                        try {
+                            const hint = await synonyms(wordToGuess);
+                            console.log('server side hint', hint);
+                            io.to(player.id).emit('word_to_guess', wordToGuess.length)
+                            io.to(player.id).emit('hint', hint) //sends hint to client
+                        } catch (error) {
+                            console.error(error);
+                        }
                     } else {
                         io.to(player.id).emit('guessing_your_word')
                     }
                 }
-
             }
         }
-    })
+    });
 
     const synonyms = (word) => {
         return new Promise((resolve, reject) => {
@@ -319,8 +308,7 @@ io.on("connection", (socket) => {
                 max: 2,
             })
                 .then((synonyms) => {
-                    const hint = `Synonyms for ${word}: ${synonyms.map((s) => s.word).join(', ')}`;
-                    console.log(hint);
+                    const hint = `${synonyms.map((s) => s.word).join(', ')}`;
                     resolve(hint);
                 })
                 .catch((error) => {
