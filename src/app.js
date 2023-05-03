@@ -285,6 +285,11 @@ io.on("connection", (socket) => {
         for (const room of rooms) {
             //We look for the right room
             if (room.room == data){
+                const gameScore = room.players.map(player => {
+                    return {player:player.userName, roundsWon:player.roundsWon}
+                })
+                // Here we send the gameScore, an array with rounds won of every player
+                io.to(String(room.room)).emit('game_score', gameScore)
                 if (room.words.length > 0) io.to(room.players[0].id).emit('all_ready_for_next_round')
                     //If we used all the words of all players the game is over
                     else {
