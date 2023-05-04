@@ -261,14 +261,13 @@ io.on("connection", (socket) => {
             if (rooms[i].room == data.room) {
                 for (player of rooms[i].players) {
                     if (player.id === socket.id) {
-                        player.word = data.word
-                        rooms[i].words.push(data.word)
+                        player.word = data.word.toLowerCase(); // convert to lowercase
+                        rooms[i].words.push(player.word); 
                     }
                 }
             }
             if (rooms[i].players.length > 2 &&
                 rooms[i].players.every(player => player.word != '')) {
-
                 console.log("All players ready");
                 io.to(String(rooms[i].room)).emit('all_players_ready')
             }
@@ -305,11 +304,23 @@ io.on("connection", (socket) => {
 
     const synonyms = (word) => {
         return new Promise((resolve, reject) => {
+            /* sending general words similar to secret word - better hints */
             datamuse.words({
-                rel_syn: word,
+                rel_gen: word,
                 max: 2,
             })
                 .then((synonyms) => {
+                    /* if general word api call is empty, check synonym api */
+                    if (synonyms.length === 0) {
+                        return datamuse.words({
+                            rel_syn: word,
+                            max: 2,
+                        })
+                            .then((synonyms) => {
+                                const hint = `${synonyms.map((s) => s.word).join(', ')}`;
+                                resolve(hint);
+                            })
+                    }
                     const hint = `${synonyms.map((s) => s.word).join(', ')}`;
                     resolve(hint);
                 })
