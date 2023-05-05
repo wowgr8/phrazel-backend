@@ -402,6 +402,9 @@ io.on("connection", (socket) => {
                 }
 
             }
+            else if(room.room == data.room && room.wordToGuess !== data.word) {
+                io.to(socket.id).emit('wrong')
+            }
         }
     })
 
