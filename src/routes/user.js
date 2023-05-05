@@ -2,13 +2,15 @@ const express = require('express')
 const router = express.Router()
 
 const {
+  getUser,
   updateUser,
   updatePassword,
 } = require('../controllers/user');
 
 
-router.route('/updateUser').patch(updateUser);
-router.route('/updatePassword').patch(updatePassword);
+// router.route('/updateUser').patch(updateUser);
+router.route('/updatePassword/:id').patch(updatePassword);
+router.route('/:id').get(getUser).patch(updateUser)
 
 
 
