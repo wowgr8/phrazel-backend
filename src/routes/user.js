@@ -4,6 +4,7 @@ const router = express.Router()
 
 const {
   getUser,
+  getUser,
   updateUser,
   updatePassword,
 } = require('../controllers/user');
