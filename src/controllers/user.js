@@ -22,19 +22,16 @@ const updatePassword = async (req, res) => {
   const {params:{id:_id}} = req
   console.log(req.body.oldPassword, req.body.newPassword)
   if (!req.body.oldPassword || !req.body.newPassword) {
-    const {params:{id:_id}} = req
-    console.log(req.body.oldPassword, req.body.newPassword)
-    if (!req.body.oldPassword || !req.body.newPassword) {
-      throw new BadRequestError('Please provide both values');
-    }
-    const user = await User.findOneAndUpdate({_id:_id}, req.body,{new:true, runValidators:true})
-    console.log(user)
-
-    user.password = req.body.newPassword;
-
-    await user.save();
-    res.status(StatusCodes.OK).json({ msg: 'Success! Password Updated.' });
+    throw new BadRequestError('Please provide both values');
   }
+  const user = await User.findOneAndUpdate({_id:_id}, req.body,{new:true, runValidators:true})
+  console.log(user)
+
+  user.password = req.body.newPassword;
+
+  await user.save();
+  res.status(StatusCodes.OK).json({ msg: 'Success! Password Updated.' });
+  
 }
 
 module.exports = {
