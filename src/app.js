@@ -261,14 +261,13 @@ io.on("connection", (socket) => {
             if (rooms[i].room == data.room) {
                 for (player of rooms[i].players) {
                     if (player.id === socket.id) {
-                        player.word = data.word
-                        rooms[i].words.push(data.word)
+                        player.word = data.word.toLowerCase(); // convert to lowercase
+                        rooms[i].words.push(player.word); 
                     }
                 }
             }
             if (rooms[i].players.length > 2 &&
                 rooms[i].players.every(player => player.word != '')) {
-
                 console.log("All players ready");
                 io.to(String(rooms[i].room)).emit('all_players_ready')
             }
@@ -286,10 +285,10 @@ io.on("connection", (socket) => {
                 rooms[i].wordToGuess = wordToGuess
                 for (const player of rooms[i].players) {
                     if (player.word !== wordToGuess) {
-                        console.log(wordToGuess, ' is the word to guess');
+                        // console.log(wordToGuess, ' is the word to guess');
                         try {
                             const hint = await synonyms(wordToGuess);
-                            console.log('server side hint', hint);
+                            // console.log('server side hint', hint);
                             io.to(player.id).emit('word_to_guess', wordToGuess.length)
                             io.to(player.id).emit('hint', hint) //sends hint to client
                         } catch (error) {
@@ -305,11 +304,23 @@ io.on("connection", (socket) => {
 
     const synonyms = (word) => {
         return new Promise((resolve, reject) => {
+            /* sending general words similar to secret word - better hints */
             datamuse.words({
-                rel_syn: word,
+                rel_gen: word,
                 max: 2,
             })
                 .then((synonyms) => {
+                    /* if general word api call is empty, check synonym api */
+                    if (synonyms.length === 0) {
+                        return datamuse.words({
+                            rel_syn: word,
+                            max: 2,
+                        })
+                            .then((synonyms) => {
+                                const hint = `${synonyms.map((s) => s.word).join(', ')}`;
+                                resolve(hint);
+                            })
+                    }
                     const hint = `${synonyms.map((s) => s.word).join(', ')}`;
                     resolve(hint);
                 })
@@ -324,6 +335,7 @@ io.on("connection", (socket) => {
         for (const room of rooms) {
             //We look for the right room
             if (room.room == data){
+                io.to(socket.id).emit('the_word_was',room.wordToGuess)
                 const gameScore = room.players.map(player => {
                     return {player:player.userName, roundsWon:player.roundsWon}
                 })
@@ -339,6 +351,7 @@ io.on("connection", (socket) => {
                         console.log(room.players[i], 'player with high score');
                         //We tell the players who won the game
                         io.to(String(room.room)).except(String(room.players[i].id)).emit('winner', room.players[i].userName)
+                        console.log('En TIMEOFF ANTES de enviar YOU WON!!!!!!!!');
                         io.to(String(room.players[i].id)).emit('you_won')
                         //When the game is over we need to reset some values of every player because maybe the players want to play a new game 
                         for (const player of room.players) {
@@ -373,7 +386,7 @@ io.on("connection", (socket) => {
                     // Here we send the gameScore, an array with rounds won of every player
                     io.to(String(room.room)).emit('game_score', gameScore)
                     //We check if we used all the words of all players, if not we tell the host(players[0]) can start next round
-                    if (room.words.length > 0) io.to(String(room.players[0].id)).emit('all_ready_for_next_round')
+                    if (room.words.length > 0) io.to(String(room.room)).emit('all_ready_for_next_round')
                     //If we used all the words of all players the game is over
                     else {
                         io.to(String(room.room)).emit('game_over')
@@ -381,6 +394,8 @@ io.on("connection", (socket) => {
                         const i = scoreArr.indexOf(Math.max(...scoreArr))
                         console.log(room.players[i], 'player with high score');
                         io.to(String(room.room)).except(String(room.players[i].id)).emit('winner', room.players[i].userName)
+                        console.log('En guessWORD ANTES de enviar YOU WON!!!!!!!!');
+
                         io.to(String(room.players[i].id)).emit('you_won')
                         //When the game is over we need to reset some values of every player because maybe the players want to play a new game 
                         for (const player of room.players) {
@@ -390,6 +405,9 @@ io.on("connection", (socket) => {
                     }
                 }
 
+            }
+            else if(room.room == data.room && room.wordToGuess !== data.word) {
+                io.to(socket.id).emit('wrong')
             }
         }
     })
