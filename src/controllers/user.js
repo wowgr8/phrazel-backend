@@ -19,7 +19,6 @@ const updateUser = async (req,res) => {
 
 const updatePassword = async (req, res) => {
   const {params:{id:_id}} = req
-  const {params:{id:_id}} = req
   console.log(req.body.oldPassword, req.body.newPassword)
   if (!req.body.oldPassword || !req.body.newPassword) {
     throw new BadRequestError('Please provide both values');
@@ -31,14 +30,13 @@ const updatePassword = async (req, res) => {
     } else {
     const user = await User.findOneAndUpdate({_id:_id})
     console.log(user)
-     
+    
     user.password = req.body.newPassword;
   
     await user.save();
     res.status(StatusCodes.OK).json({ msg: 'Success! Password Updated.' });
     }
   }
- 
 };
 
 module.exports = {
