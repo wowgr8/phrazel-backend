@@ -1,3 +1,4 @@
+
 const express = require('express')
 const router = express.Router()
 
@@ -7,8 +8,6 @@ const {
   updatePassword,
 } = require('../controllers/user');
 
-
-// router.route('/updateUser').patch(updateUser);
 router.route('/updatePassword/:id').patch(updatePassword);
 router.route('/:id').get(getUser).patch(updateUser)
 

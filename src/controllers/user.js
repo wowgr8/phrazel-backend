@@ -1,7 +1,6 @@
 const User = require('../models/User')
 const {StatusCodes} = require('http-status-codes')
 const {BadRequestError,NotFoundError,UnauthenticatedError} = require('../errors')
-// const {attachCookiesToResponse, createTokenUser} = require('../utils');
 
 const getUser = async (req,res) =>{
   const { params:{id:_id}} = req
@@ -19,6 +18,7 @@ const updateUser = async (req,res) => {
 }
 
 const updatePassword = async (req, res) => {
+  const {params:{id:_id}} = req
   const {params:{id:_id}} = req
   console.log(req.body.oldPassword, req.body.newPassword)
   if (!req.body.oldPassword || !req.body.newPassword) {
