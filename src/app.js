@@ -107,12 +107,16 @@ io.on("connection", (socket) => {
                 console.log(`User ${userName} connected`);
             }
         }
-        if (rooms.length > 0) {
-            availableRoomsFun('we connect')
-        }
         // If The user is registered we just push the name to active users because the check was done at the registration 
         activeUsersApp.push({ id: socket.id, userName: userName, room: 'lobby' })
     })
+    //Once the player is on Game Lobby sends a request for available rooms
+    socket.on('search_for_rooms',()=>{
+        if (rooms.length > 0) {
+            availableRoomsFun('we connect')
+        }
+    })
+
     //maxRooms let us check we don't have more than 10 players in a room
     function availableRoomsFun(reason) {
         maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
