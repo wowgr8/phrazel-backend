@@ -111,11 +111,13 @@ io.on("connection", (socket) => {
         activeUsersApp.push({ id: socket.id, userName: userName, room: 'lobby' })
     })
 
+    //Once the player is on Game Lobby sends a request for available rooms
     socket.on('search_for_rooms',()=>{
         if (rooms.length > 0) {
             availableRoomsFun('we connect')
         }
     })
+
     //maxRooms let us check we don't have more than 10 players in a room
     function availableRoomsFun(reason) {
         maxRooms = rooms.filter(room => room.players.length < 10) // Can this be a function?
@@ -200,6 +202,7 @@ io.on("connection", (socket) => {
                 arrayOfPlayersIds = rooms[i].players.map(player => player.id)
                 const index = arrayOfPlayersIds.indexOf(socket.id)
                 rooms[i].players.splice(index, 1)
+                io.to(rooms[i].players[0].id).emit('new_host')
                 if (rooms[i].players.length === 0) rooms.splice(i, 1)
                 else {
                     io.to(rooms[i].players[0].id).emit('new_host')
