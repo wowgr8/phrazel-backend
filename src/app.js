@@ -202,7 +202,6 @@ io.on("connection", (socket) => {
                 arrayOfPlayersIds = rooms[i].players.map(player => player.id)
                 const index = arrayOfPlayersIds.indexOf(socket.id)
                 rooms[i].players.splice(index, 1)
-                io.to(rooms[i].players[0].id).emit('new_host')
                 if (rooms[i].players.length === 0) rooms.splice(i, 1)
                 else {
                     io.to(rooms[i].players[0].id).emit('new_host')
