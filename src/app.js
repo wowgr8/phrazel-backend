@@ -110,6 +110,7 @@ io.on("connection", (socket) => {
         // If The user is registered we just push the name to active users because the check was done at the registration 
         activeUsersApp.push({ id: socket.id, userName: userName, room: 'lobby' })
     })
+
     //Once the player is on Game Lobby sends a request for available rooms
     socket.on('search_for_rooms',()=>{
         if (rooms.length > 0) {
