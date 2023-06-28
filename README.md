@@ -10,12 +10,10 @@ Phrazel is being deployed on Vercel on the front-end & Render on the back-end--s
 
 <img src="images/landing-page.png" alt="Landing page image" Title="Click to enlarge" width="75%" height="75%">
 <br>
-<br>
 
 **Game lobby image**:
 
 <img src="images/game-lobby.png" alt="Game lobby image" Title="Click to enlarge" width="75%" height="75%">
-<br>
 <br>
 
 **Game screen images**:
