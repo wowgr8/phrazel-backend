@@ -2,7 +2,7 @@
 
 Phrazel is a game created by Team Concurrent of [Code the Dream's](https://github.com/Code-the-Dream-School) Baboon/Bald Eagle Practicum. Team Concurrent is made up of our back-end team ([Aboubacar](https://github.com/aboubacar108), [Alejandro](https://github.com/Alejandro-Patino-Camargo), & [Mauricio](https://github.com/mautoranzo)) & our front-end team ([MacKenzie](https://github.com/mjs94080), [Cesar](https://github.com/wowgr8), & [Brendan](https://github.com/bhoconnor)). We were mentored by [Dan](https://github.com/benochi) & [Frank](https://github.com/frankstepanski) of Code the Dream (CTD).
 
-Phrazel is being deployed on Vercel on the front-end & Render on the back-end--stay tuned for the fully-deployed links.
+Phrazel is being deployed on Vercel on the front-end & Render on the back-end--test out the [fully-deployed game here](https://phrazel.vercel.app/).
 
 ### Game screenshots
 
